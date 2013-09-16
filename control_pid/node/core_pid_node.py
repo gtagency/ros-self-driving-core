@@ -48,6 +48,7 @@ def pid_correction(error_angle):
         if(adj_error_angle > MaxError):
             adj_error_angle = MaxError
         elif(adj_error_angle < -MaxError):
+            adj_error_angle = -MaxError
         print "Recieved error and publishing correction", error_angle,adj_error_angle
         correction_pub.publish(adj_error_angle)
     else:
