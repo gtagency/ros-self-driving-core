@@ -28,32 +28,30 @@ def node():
     rospy.spin()
 
 def handle_control_error(data):
-    #http://wiki.ros.org/rospy/Overview/Time
-    rospy.Timer(rospy.Duration(sampleTime),pid_correction,False)
+    pid_correction(data.data)
 
-def pid_correction(data):
-    error_angle = data.data
+def pid_correction(error_angle):
     global old_error, error_integral, proportional_gain, integral_gain, derivative_gain, correction_pub, sampleTime, lastTime, MaxError
     
     c_time_seconds = rospy.get_time()
-    
     t_diff = c_time_seconds - lastTime
-    #if(t_diff >= sampleTime):
-    error_differential = (error_angle - old_error)/(t_diff)
-    error_integral += (error_angle * t_diff)
-    if(error_integral > MaxError):
-        error_integral = MaxError
-    elif(error_integral < -MaxError):
-        error_integral = -MaxError
-    old_error = error_angle
-    lastTime = c_time_seconds
-    adj_error_angle = proportional_gain * error_angle + derivative_gain * error_differential + integral_gain * error_integral
-    if(adj_error_angle > MaxError):
-        adj_error_angle = MaxError
-    elif(adj_error_angle < -MaxError):
-        adj_error_angle = -MaxError
-    print "Recieved error and publishing correction", error_angle,adj_error_angle
+    if(t_diff >= sampleTime):
+        error_differential = (error_angle - old_error)/(t_diff)
+        error_integral += (error_angle * t_diff)
+        if(error_integral > MaxError):
+            error_integral = MaxError
+        elif(error_integral < -MaxError):
+            error_integral = -MaxError
+        old_error = error_angle
+        lastTime = c_time_seconds
+        adj_error_angle = proportional_gain * error_angle + derivative_gain * error_differential + integral_gain * error_integral
+        if(adj_error_angle > MaxError):
+            adj_error_angle = MaxError
+        elif(adj_error_angle < -MaxError):
+        print "Recieved error and publishing correction", error_angle,adj_error_angle
         correction_pub.publish(adj_error_angle)
+    else:
+        print "Too soon"
 
 
 def set_gains(req):
