@@ -16,7 +16,7 @@ proportional_gain = 1
 integral_gain = 0
 derivative_gain = 0
 # nanoseconds
-sampleTime = 500000000.0
+sampleTime = 100000000.0
 lastTime = 0.0
 MaxError = 1.57079633
 def node():
