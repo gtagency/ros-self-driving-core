@@ -15,7 +15,7 @@ error_integral = 0
 proportional_gain = 1
 integral_gain = 0
 derivative_gain = 0
-sampleTime = 1.0
+sampleTime = 500000000.0
 lastTime = 0.0
 MaxError = 1.57079633
 def node():
@@ -33,7 +33,8 @@ def handle_control_error(data):
 def pid_correction(error_angle):
     global old_error, error_integral, proportional_gain, integral_gain, derivative_gain, correction_pub, sampleTime, lastTime, MaxError
     
-    c_time_seconds = rospy.get_time()
+    now = rospy.get_rostime()
+    c_time_seconds = now.nsecs
     t_diff = c_time_seconds - lastTime
     if(t_diff >= sampleTime):
         error_differential = (error_angle - old_error)/(t_diff)
