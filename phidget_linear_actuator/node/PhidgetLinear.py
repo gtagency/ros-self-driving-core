@@ -48,8 +48,6 @@ def bounded_value(val, minVal, maxVal):
    
     return bv 
 
-
-
 def move(request):
     """Cause the linear actuator to move or stop moving
 
@@ -111,6 +109,10 @@ def mcInputChanged(e):
     return
 
 def mcVelocityChanged(e):
+    return
+
+def mcSensorUpdated(e):
+    #print e.index, e.value
     return
 
 def leftEncoderUpdated(e):
@@ -175,6 +177,7 @@ def setupMoveService():
         motorControl.setOnCurrentChangeHandler(mcCurrentChanged)
         motorControl.setOnInputChangeHandler(mcInputChanged)
         motorControl.setOnVelocityChangeHandler(mcVelocityChanged)
+        motorControl.setOnSensorUpdateHandler(mcSensorUpdated)
         motorControl.openPhidget()
 
         #attach the board
