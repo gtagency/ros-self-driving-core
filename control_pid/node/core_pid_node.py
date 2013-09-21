@@ -15,9 +15,10 @@ error_integral = 0
 proportional_gain = 1
 integral_gain = 0
 derivative_gain = 0
-sampleTime = 1.0
+# nanoseconds
+sampleTime = 100000000.0
 lastTime = 0.0
-
+MaxError = 1.57079633
 def node():
     global correction_pub
     rospy.init_node('control_pid')
@@ -31,17 +32,25 @@ def handle_control_error(data):
     pid_correction(data.data)
 
 def pid_correction(error_angle):
-    global old_error, error_integral, proportional_gain, integral_gain, derivative_gain, correction_pub, sampleTime, lastTime
+    global old_error, error_integral, proportional_gain, integral_gain, derivative_gain, correction_pub, sampleTime, lastTime, MaxError
     
-    
-    c_time_seconds = rospy.get_time()
+    now = rospy.get_rostime()
+    c_time_seconds = now.nsecs
     t_diff = c_time_seconds - lastTime
     if(t_diff >= sampleTime):
         error_differential = (error_angle - old_error)/(t_diff)
         error_integral += (error_angle * t_diff)
+        if(error_integral > MaxError):
+            error_integral = MaxError
+        elif(error_integral < -MaxError):
+            error_integral = -MaxError
         old_error = error_angle
         lastTime = c_time_seconds
         adj_error_angle = proportional_gain * error_angle + derivative_gain * error_differential + integral_gain * error_integral
+        if(adj_error_angle > MaxError):
+            adj_error_angle = MaxError
+        elif(adj_error_angle < -MaxError):
+            adj_error_angle = -MaxError
         print "Recieved error and publishing correction", error_angle,adj_error_angle
         correction_pub.publish(adj_error_angle)
     else:
