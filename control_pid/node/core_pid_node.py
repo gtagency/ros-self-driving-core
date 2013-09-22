@@ -2,7 +2,7 @@
 import roslib
 import rospy
 from std_msgs.msg import Float64
-from control_pid.srv import PidGains
+from core_srvs.srv import PidGains
 
 # Global publisher for sending angle adjustments
 correction_pub = None

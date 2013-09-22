@@ -11,7 +11,7 @@ __version__ = '1'
 
 import roslib; roslib.load_manifest('phidget_linear_actuator')
 from phidget_linear_actuator.srv import *
-from phidget_linear_actuator.msg import *
+from core_msgs.msg import *
 from std_msgs.msg import UInt32
 
 import rospy
@@ -25,12 +25,13 @@ from Phidgets.Events.Events import EncoderPositionUpdateEventArgs
 motorControl = 0
 invert_speed = True
 linear = 0
+feedbackSensor = 0
 minAcceleration = 0
 maxAcceleration = 0
 minSpeed = -100
 maxSpeed = 100
 timer = 0
-posdataPub = 0
+posdataPub = None
 position = 0
 
 def stop():
@@ -118,40 +119,20 @@ def mcVelocityChanged(e):
 
 def mcSensorUpdated(e):
     #print e.index, e.value
-    position = e.value 
+    # Only publish sensor updates on the feedback sensor
+    if e.index == feedbackSensor:
+        position = e.value
+
+        if posdataPub:
+            posdataPub.publish(position)
+        #msg.header.stamp = rospy.Time.now()
     return
 
 def leftEncoderUpdated(e):
 
-    global leftPosition, rightPosition
-	
-    leftPosition += e.positionChange
-    if motorControlRight:
-        rightPosition = motorControlRight.getEncoderPosition(rightWheels) # update the right encoder so that we have a correct value of both encoders at a given time.
-
-	# send message on the position topic
-    msg = PosMsg()
-    msg.px = leftPosition
-    msg.py = rightPosition
-    msg.header.stamp = rospy.Time.now()
-    posdataPub.publish(msg)
-
     return
 
 def rightEncoderUpdated(e):
-
-    global leftPosition, rightPosition
-
-    rightPosition += e.positionChange
-    if motorControl:
-        leftPosition = motorControl.getEncoderPosition(linear) # update the left encoder so that we have a correct value of both encoders at a given time.
-
-	# send message on the position topic
-    msg = PosMsg()
-    msg.px = leftPosition
-    msg.py = rightPosition
-    msg.header.stamp = rospy.Time.now()
-    posdataPub.publish(msg)
 
     return
 
@@ -223,7 +204,7 @@ def setupMoveService():
 
     phidgetMotorTopic = rospy.Subscriber("PhidgetLinear", LinearCommand ,move)
     phidgetMotorService = rospy.Service('PhidgetLinear',Move, move)
-    posdataPub = rospy.Publisher("position_data", UInt32)
+    posdataPub = rospy.Publisher("position", UInt32, latch=True)
     rospy.spin()
 
 if __name__ == "__main__":

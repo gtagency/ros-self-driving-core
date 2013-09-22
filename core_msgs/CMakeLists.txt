@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(phidget_linear_actuator)
+project(core_msgs)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  message_generation
   rospy
   std_msgs
-  core_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -24,21 +24,22 @@ find_package(catkin REQUIRED COMPONENTS
 #######################################
 
 ## Generate messages in the 'msg' folder
-#add_message_files(
-#    FILES
-#    LinearCommand.msg
-#)
+add_message_files(
+    FILES
+    LinearCommand.msg
+)
 
 ## Generate services in the 'srv' folder
-add_service_files(
-    FILES
-    Move.srv
-)
+# add_service_files(
+#   FILES
+#   Service1.srv
+#   Service2.srv
+# )
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
-  DEPENDENCIES
-  std_msgs
+    DEPENDENCIES
+    std_msgs
 )
 
 ###################################
@@ -52,8 +53,8 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES phidget_linear_actuator
-#  CATKIN_DEPENDS rospy std_msgs
+#  LIBRARIES core_msgs
+#  CATKIN_DEPENDS message_generation rospy std_msgs
 #  DEPENDS system_lib
 )
 
@@ -69,19 +70,19 @@ include_directories(
 )
 
 ## Declare a cpp library
-# add_library(phidget_linear_actuator
-#   src/${PROJECT_NAME}/phidget_linear_actuator.cpp
+# add_library(core_msgs
+#   src/${PROJECT_NAME}/core_msgs.cpp
 # )
 
 ## Declare a cpp executable
-# add_executable(phidget_linear_actuator_node src/phidget_linear_actuator_node.cpp)
+# add_executable(core_msgs_node src/core_msgs_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(phidget_linear_actuator_node phidget_linear_actuator_generate_messages_cpp)
+# add_dependencies(core_msgs_node core_msgs_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(phidget_linear_actuator_node
+# target_link_libraries(core_msgs_node
 #   ${catkin_LIBRARIES}
 # )
 
@@ -100,7 +101,7 @@ include_directories(
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS phidget_linear_actuator phidget_linear_actuator_node
+# install(TARGETS core_msgs core_msgs_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -125,7 +126,7 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_phidget_linear_actuator.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_core_msgs.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
