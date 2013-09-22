@@ -12,6 +12,8 @@ __version__ = '1'
 import roslib; roslib.load_manifest('phidget_linear_actuator')
 from phidget_linear_actuator.srv import *
 from phidget_linear_actuator.msg import *
+from std_msgs.msg import UInt32
+
 import rospy
 from threading import Timer
 from ctypes import *
@@ -21,6 +23,7 @@ from Phidgets.PhidgetException import PhidgetErrorCodes, PhidgetException
 from Phidgets.Events.Events import EncoderPositionUpdateEventArgs
 
 motorControl = 0
+invert_speed = True
 linear = 0
 minAcceleration = 0
 maxAcceleration = 0
@@ -28,10 +31,10 @@ minSpeed = -100
 maxSpeed = 100
 timer = 0
 posdataPub = 0
-leftPosition = 0
-rightPosition = 0
+position = 0
 
 def stop():
+    print "Stopping at", position
     try:
         motorControl.setVelocity(linear,0);
     except PhidgetException as e:
@@ -54,7 +57,7 @@ def move(request):
     Request a common acceleration, wheel directions and wheel speeds
 
     """
-    global timer
+    global timer, invert_speed
     if timer:
         timer.cancel();
         rospy.logdebug(
@@ -66,7 +69,9 @@ def move(request):
     acceleration = bounded_value(request.acceleration, float(minAcceleration), float(maxAcceleration))
     # NOTE: negate the speed so + is out and - is back
     # FIXME: this should be an attribute
-    speed        = -bounded_value(request.speed,        float(minSpeed), float(maxSpeed))
+    speed        = bounded_value(request.speed,        float(minSpeed), float(maxSpeed))
+    if invert_speed:
+        speed = -speed
 
     rospy.logdebug(
             "Speed: %d, Acceleration: %d", 
@@ -113,6 +118,7 @@ def mcVelocityChanged(e):
 
 def mcSensorUpdated(e):
     #print e.index, e.value
+    position = e.value 
     return
 
 def leftEncoderUpdated(e):
@@ -161,8 +167,14 @@ def setupMoveService():
             'PhidgetLinear',
             log_level = rospy.DEBUG
             )
+    
+    serial_no = rospy.get_param("~serial_no", 0)
+    if not serial_no == 0:
+        rospy.loginfo("Using motor controller with serial number %d", serial_no)
+    else:
+        rospy.loginfo("No serial number specified.  This is fine for systems with one controller, but may behave unpredictably for systems with multiple motor controllers")
 
-    global motorControl, motorControlRight, minAcceleration, maxAcceleration, timer, motors_inverted, phidget1065, rightWheels, posdataPub
+    global motorControl, minAcceleration, maxAcceleration, timer, invert_speed, posdataPub
     timer = 0
     try:
         motorControl = MotorControl()
@@ -178,7 +190,10 @@ def setupMoveService():
         motorControl.setOnInputChangeHandler(mcInputChanged)
         motorControl.setOnVelocityChangeHandler(mcVelocityChanged)
         motorControl.setOnSensorUpdateHandler(mcSensorUpdated)
-        motorControl.openPhidget()
+        if serial_no != 0:
+            motorControl.openPhidget(serial_no)
+        else:
+            motorControl.openPhidget()
 
         #attach the board
         motorControl.waitForAttach(10000)
@@ -204,11 +219,11 @@ def setupMoveService():
     minAcceleration = motorControl.getAccelerationMin(linear)
     maxAcceleration = motorControl.getAccelerationMax(linear)
 
-    motors_inverted = rospy.get_param('~motors_inverted', False)
+    invert_speed = rospy.get_param('~invert_speed', False)
 
     phidgetMotorTopic = rospy.Subscriber("PhidgetLinear", LinearCommand ,move)
     phidgetMotorService = rospy.Service('PhidgetLinear',Move, move)
-    posdataPub = rospy.Publisher("position_data", PosMsg)
+    posdataPub = rospy.Publisher("position_data", UInt32)
     rospy.spin()
 
 if __name__ == "__main__":
@@ -216,7 +231,5 @@ if __name__ == "__main__":
 
     try:
         motorControl.closePhidget()
-        if phidget1065 == True:
-            motorControlRight.closePhidget()
     except:
         pass
