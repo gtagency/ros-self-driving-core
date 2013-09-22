@@ -1,0 +1,2 @@
+# Position between 0 and 1, which represents lock to lock.
+float32 targetPosition
