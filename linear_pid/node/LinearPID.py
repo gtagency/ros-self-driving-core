@@ -27,12 +27,12 @@ maxOutput = 100
 duration = 0 # run until we say stop
 
 #Amount of error that can still be present when we stop
-deadBand = 0
+deadBand = 5
 
 # component gains
-Kp = 1
-Ki = 0
-Kd = 0
+Kp = 3
+Ki = 2
+Kd = 1
 
 #
 lastFeedback = 0
@@ -51,8 +51,8 @@ outputLast = 0
 #Last error from algorithm
 errorLast = 0
 
-minFeedback=280
-maxFeedback=943
+minFeedback=290
+maxFeedback=940
 
 canStopSpeed=15
 
