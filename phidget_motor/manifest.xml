@@ -1,0 +1,27 @@
+<package>
+  <description brief="phidget_motor">
+
+     A service to control the robot drive motors using the 
+    Phidget HC Motor Control
+
+    This package depends on the Phidgets client library being
+    installed manually from
+    http://www.phidgets.com/downloads/libraries/libphidget_2.1.8.20111028.tar.gz
+    and then the Python module from
+    http://www.phidgets.com/downloads/libraries/PhidgetsPython_2.1.8.20111028.zip
+
+    Copied from Corobot stack on Oct 5, 2013
+
+  </description>
+  <author>Bill Mania/bmania@coroware.com</author>
+  <license>Copyright 2011 Coroware, Inc.</license>
+  <review status="unreviewed" notes=""/>
+  <url></url>
+  <depend package="std_msgs" />
+  <depend package="rospy" />
+  <rosdep name="python" />
+  <depend package="core_srvs" />
+  <depend package="core_msgs" />
+</package>
+
+
