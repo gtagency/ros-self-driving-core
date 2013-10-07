@@ -8,7 +8,7 @@ __version__ = '1'
 import roslib; roslib.load_manifest('teleop_key')
 from core_msgs.msg import *
 from core_srvs.srv import Move
-from std_msgs.msg import UInt32
+from std_msgs.msg import Float32
 
 import curses
 from curses_keyboard import CursesKeyboard
@@ -115,6 +115,7 @@ def main():
     rospy.init_node('teleop_key')
     motorPub = rospy.Publisher('PhidgetMotor', MotorCommand)
     steerPub = rospy.Publisher('Steering', LinearCommand)
+    steerPctPub = rospy.Publisher('SteeringPosition', Float32)
     
     print 'exit with x'
     c = CursesKeyboard(keyDownHandler, keyUpHandler)

@@ -33,6 +33,8 @@ maxSpeed = 100
 timer = 0
 posdataPub = None
 position = 0
+minPos = 0
+maxPos = 1024
 
 def stop():
     print "Stopping at", position
@@ -118,11 +120,14 @@ def mcVelocityChanged(e):
     return
 
 def mcSensorUpdated(e):
+    global minPos, maxPos
     #print e.index, e.value
     # Only publish sensor updates on the feedback sensor
     if e.index == feedbackSensor:
         position = e.value
 
+        if position <= minPos or position >= maxPos:
+            stop()
         if posdataPub:
             posdataPub.publish(position)
         #msg.header.stamp = rospy.Time.now()
@@ -201,6 +206,8 @@ def setupMoveService():
     maxAcceleration = motorControl.getAccelerationMax(linear)
 
     invert_speed = rospy.get_param('~invert_speed', False)
+    maxPos = rospy.get_param('~max_pos', 1024)
+    minPos = rospy.get_param('~min_pos', 0)
 
     phidgetMotorTopic = rospy.Subscriber("PhidgetLinear", LinearCommand ,move)
     phidgetMotorService = rospy.Service('PhidgetLinear',Move, move)
