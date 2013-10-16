@@ -10,7 +10,7 @@ __author__ = 'Jesse Rosalia <jesse.rosalia@gatech.edu>'
 __version__ = '1'
 
 import roslib; roslib.load_manifest('phidget_linear_actuator')
-from phidget_linear_actuator.srv import *
+from core_srvs.srv import *
 from core_msgs.msg import *
 from std_msgs.msg import UInt32
 
@@ -33,8 +33,8 @@ maxSpeed = 100
 timer = 0
 posdataPub = None
 position = 0
-minPos = 0
-maxPos = 1024
+minPos = 10
+maxPos = 1014
 
 def stop():
     print "Stopping at", position
@@ -201,13 +201,16 @@ def setupMoveService():
                 motorControl.getSerialNum(),
                 motorControl.getDeviceVersion()
                 )
-
+    # ensure the motor controller attempts to brake the linear
+    # when velocity is cut to 0
+    motorControl.setBraking(linear, 100)
+#    print motorControl.getBraking(linear)
     minAcceleration = motorControl.getAccelerationMin(linear)
     maxAcceleration = motorControl.getAccelerationMax(linear)
 
     invert_speed = rospy.get_param('~invert_speed', False)
-    maxPos = rospy.get_param('~max_pos', 1024)
-    minPos = rospy.get_param('~min_pos', 0)
+    maxPos = rospy.get_param('~max_pos', 1014)
+    minPos = rospy.get_param('~min_pos', 10)
 
     phidgetMotorTopic = rospy.Subscriber("PhidgetLinear", LinearCommand ,move)
     phidgetMotorService = rospy.Service('PhidgetLinear',Move, move)
