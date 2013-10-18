@@ -1,13 +1,14 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(core_msgs)
+project(lane_detect)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  message_generation
-  std_msgs
-  geometry_msgs
+  cv_bridge
+  opencv2
+  roscpp
+  sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -24,12 +25,11 @@ find_package(catkin REQUIRED COMPONENTS
 #######################################
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-    FILES
-    LinearCommand.msg
-    MotorCommand.msg
-    Obstacle.msg
-)
+# add_message_files(
+#   FILES
+#   Message1.msg
+#   Message2.msg
+# )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -39,11 +39,10 @@ add_message_files(
 # )
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
-    DEPENDENCIES
-    std_msgs
-    geometry_msgs
-)
+# generate_messages(
+#   DEPENDENCIES
+#   sensor_msgs
+# )
 
 ###################################
 ## catkin specific configuration ##
@@ -56,8 +55,8 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES core_msgs
-#  CATKIN_DEPENDS message_generation rospy std_msgs
+#  LIBRARIES lane_detect
+#  CATKIN_DEPENDS cv_bridge opencv2 roscpp sensor_msgs
 #  DEPENDS system_lib
 )
 
@@ -73,21 +72,21 @@ include_directories(
 )
 
 ## Declare a cpp library
-# add_library(core_msgs
-#   src/${PROJECT_NAME}/core_msgs.cpp
+# add_library(lane_detect
+#   src/${PROJECT_NAME}/lane_detect.cpp
 # )
 
 ## Declare a cpp executable
-# add_executable(core_msgs_node src/core_msgs_node.cpp)
+add_executable(lane_detect_node src/lane_detect_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(core_msgs_node core_msgs_generate_messages_cpp)
+# add_dependencies(lane_detect_node lane_detect_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(core_msgs_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(lane_detect_node
+  ${catkin_LIBRARIES}
+)
 
 #############
 ## Install ##
@@ -104,7 +103,7 @@ include_directories(
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS core_msgs core_msgs_node
+# install(TARGETS lane_detect lane_detect_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -129,7 +128,7 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_core_msgs.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_lane_detect.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
