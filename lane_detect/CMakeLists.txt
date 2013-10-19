@@ -6,10 +6,13 @@ project(lane_detect)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   cv_bridge
-  opencv2
   roscpp
   sensor_msgs
+  core_msgs
+  image_transport
 )
+
+find_package(OpenCV REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -77,7 +80,14 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(lane_detect_node src/lane_detect_node.cpp)
+add_executable(lane_detect_node
+  src/lane_detect_node.cpp
+  src/point.cpp
+  src/lane.cpp
+  src/lane_extract_cv.cpp
+  src/ground_transform_sphere.cpp
+
+)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -86,6 +96,7 @@ add_executable(lane_detect_node src/lane_detect_node.cpp)
 ## Specify libraries to link a library or executable target against
 target_link_libraries(lane_detect_node
   ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
 )
 
 #############
