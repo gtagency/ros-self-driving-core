@@ -10,6 +10,7 @@ namespace ld {
     class LaneExtractCv {
     private:
         std::vector<Lane> lanes;
+        cv::Mat processed;
 
         void doLaneExtraction(const cv::Mat& src, const GroundTransform& gtrans);
 
@@ -20,6 +21,9 @@ namespace ld {
         int numLanes();
 
         void describeLane(int num, Lane& lane);
+
+        const cv::Mat& getProcessedImage();
+        //int getProjectedImageEnc();
     };
 }
 

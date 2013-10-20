@@ -23,7 +23,15 @@ using namespace ld;
 
 ros::Publisher lanePoly_pub;
 image_transport::Publisher projImage_pub;
+/*
+void projConnectCallback(const ros::SingleSubscriberPublisher&) {
+  ROS_INFO("connectCallback");
+}
 
+void projDisconnectCallback(const ros::SingleSubscriberPublisher&) {
+  ROS_INFO("disconnectCallback");
+}
+*/
 void imageCallback(const sensor_msgs::ImageConstPtr& image) {
     cv_bridge::CvImagePtr cv_ptr;
     try {
@@ -36,6 +44,17 @@ void imageCallback(const sensor_msgs::ImageConstPtr& image) {
     GroundTransformSphere gtrans;
     LaneExtractCv le(cv_ptr->image, gtrans);
 
+    //publish the processed/projected image if there are
+    // any listeners
+    if (projImage_pub.getNumSubscribers() > 0) {
+        ROS_INFO("Publishing processed image");
+        cv_bridge::CvImage projImage;
+//        projImage.header 
+        projImage.image = le.getProcessedImage();
+        projImage.encoding = enc::BGR8; //"passthrough"; //le.getProcessedImageEnc();
+        projImage_pub.publish(projImage.toImageMsg());
+    }
+    
     ObstacleArrayStamped msg;
     //fill in timestamp info TODO
     for (int ii = 0; ii < le.numLanes(); ii++) {
