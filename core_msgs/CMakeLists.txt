@@ -29,6 +29,7 @@ add_message_files(
     LinearCommand.msg
     MotorCommand.msg
     Obstacle.msg
+    ObstacleArrayStamped.msg
 )
 
 ## Generate services in the 'srv' folder
