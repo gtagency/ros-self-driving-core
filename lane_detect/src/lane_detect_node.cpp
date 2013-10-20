@@ -65,12 +65,12 @@ void imageCallback(const sensor_msgs::ImageConstPtr& image) {
         
         Obstacle obstacle;
         geometry_msgs::Polygon poly;
-        for (std::vector<Point>::const_iterator it = lane.getPoints().begin();
+        for (std::vector<cv::Point>::const_iterator it = lane.getPoints().begin();
              it != lane.getPoints().end();
              ++it) {
             geometry_msgs::Point32 p32;
-            p32.x = it->getX();
-            p32.y = it->getY();
+            p32.x = it->x;
+            p32.y = it->y;
             p32.z = 0;
             poly.points.push_back(p32);
         }

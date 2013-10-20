@@ -1,8 +1,11 @@
 
 #include <vector>
 #include "lane_extract_cv.h"
+#include "curve_detect.h"
+#include "math.h"
 
 using namespace ld;
+using namespace cd;
 using namespace std;
 
 LaneExtractCv::LaneExtractCv(const cv::Mat& src, const GroundTransform& gtrans) {
@@ -190,6 +193,49 @@ void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& 
     removeSmall(mask, mask, 100);
 
     gtrans.transform(mask, this->processed);
+/*
+yRange = (size(rgb_frame, 1) - box_height):size(rgb_frame, 1);
+for i = (box_width/2):(size(rgb_frame, 2) - box_width/2)
+    xRangeL = uint32(i - box_width/2 + 1):i;
+    xRangeR = i:uint32(i + box_width/2);
+    tileL = rgb_frame(yRange, xRangeL);
+    tileR = rgb_frame(yRange, xRangeR);
+    if abs(sum(tileL(:)) - sum(tileR(:))) > 3000
+        x = i
+        abs(sum(tileL(:)) - sum(tileR(:)))
+        plot(i,(size(rgb_frame, 1) - box_height),'r','LineWidth',1.5);
+    end
+end
+*/
+    int boxWidth = 10;
+    int boxWidthHalf = boxWidth/2;
+    int boxHeight = 20;
+    cv::Size size = this->processed.size();
+    int rTop = size.height - boxHeight;
+    int startX = -1;
+    for (int c = boxWidthHalf + 1; c < size.width - boxWidthHalf; c++) {
+        Rect rectL = Rect(c,                rTop, boxWidthHalf, boxHeight);
+        Rect rectR = Rect(c + boxWidthHalf, rTop, boxWidthHalf, boxHeight);
+        Mat tileL = Mat(this->processed, rectL);
+        Mat tileR = Mat(this->processed, rectR);
+        cv::Scalar diff = sum(tileL - tileR);
+        if (abs(diff.val[0]) > 3000) {
+            startX = c;
+        }
+    }
+
+    cv::Point initialPoint = cv::Point(startX, size.height - boxHeight/2); 
+    CurveDetect cd = CurveDetect(boxHeight, boxWidth);
+
+    cd.fitCurve(this->processed, initialPoint, 20);
+    std::vector<Point>::iterator it = cd.getPointsOnCurve().begin();
+    Point pt = *it;
+    while (++it != cd.getPointsOnCurve().end()) {
+        Point nextPt = *it;
+        printf ("Line from (%d, %d) to (%d, %d)\n", pt.x, pt.y, it->x, it->y);
+        line(this->processed, pt, nextPt, Scalar(127, 127, 127));
+        pt = nextPt;
+    }
     
     //find lanes in resulting transform and fill in this->lanes 
 }

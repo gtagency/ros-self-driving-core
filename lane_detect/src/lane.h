@@ -2,15 +2,15 @@
 #define __LANE_H
 
 #include <vector>
-#include "point.h"
+#include <cv.h>
 
 namespace ld {
     class Lane {
     private:
         int type;
-        std::vector<Point> points;
+        std::vector<cv::Point> points;
     public:
-        const std::vector<Point>& getPoints();
+        const std::vector<cv::Point>& getPoints();
 
     };
 }
