@@ -23,7 +23,7 @@ namespace ld {
         void describeLane(int num, Lane& lane);
 
         const cv::Mat& getProcessedImage();
-        //int getProjectedImageEnc();
+        int getProcessedImageEnc();
     };
 }
 

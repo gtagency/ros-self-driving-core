@@ -16,13 +16,15 @@
 #include "lane_extract_cv.h"
 #include "ground_transform_sphere.h"
 
+#include "cv_bridge_ex.h"
+
 namespace enc = sensor_msgs::image_encodings;
 
 using namespace core_msgs;
 using namespace ld;
 
 ros::Publisher lanePoly_pub;
-image_transport::Publisher projImage_pub;
+image_transport::Publisher procImage_pub;
 /*
 void projConnectCallback(const ros::SingleSubscriberPublisher&) {
   ROS_INFO("connectCallback");
@@ -46,13 +48,13 @@ void imageCallback(const sensor_msgs::ImageConstPtr& image) {
 
     //publish the processed/projected image if there are
     // any listeners
-    if (projImage_pub.getNumSubscribers() > 0) {
+    if (procImage_pub.getNumSubscribers() > 0) {
         ROS_INFO("Publishing processed image");
-        cv_bridge::CvImage projImage;
+        cv_bridge::CvImage procImage;
 //        projImage.header 
-        projImage.image = le.getProcessedImage();
-        projImage.encoding = enc::BGR8; //"passthrough"; //le.getProcessedImageEnc();
-        projImage_pub.publish(projImage.toImageMsg());
+        procImage.image = le.getProcessedImage();
+        procImage.encoding = getRosType(le.getProcessedImageEnc());
+        procImage_pub.publish(procImage.toImageMsg());
     }
     
     ObstacleArrayStamped msg;
@@ -89,7 +91,7 @@ int main(int argc, char** argv) {
     //ros::NodeHandle n_params("~");
     //n_params.getParam("
    
-    projImage_pub = it.advertise("image_projection", 1);
+    procImage_pub = it.advertise("image_processed", 1);
     image_transport::Subscriber sub = it.subscribe("image", 1, imageCallback);
     
     lanePoly_pub  = nh.advertise<ObstacleArrayStamped>("obstacles", 100);

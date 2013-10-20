@@ -86,7 +86,7 @@ add_executable(lane_detect_node
   src/lane.cpp
   src/lane_extract_cv.cpp
   src/ground_transform_sphere.cpp
-
+  src/cv_bridge_ex.cpp
 )
 
 ## Add cmake target dependencies of the executable/library

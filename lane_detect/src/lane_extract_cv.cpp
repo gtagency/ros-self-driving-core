@@ -13,14 +13,18 @@ LaneExtractCv::~LaneExtractCv() {
 }
 
 int LaneExtractCv::numLanes() {
-   return lanes.size();
+    return lanes.size();
 }
 
 void LaneExtractCv::describeLane(int num, Lane& lane) {
 }
 
 const cv::Mat& LaneExtractCv::getProcessedImage() {
-   return this->processed; 
+    return this->processed; 
+}
+
+int LaneExtractCv::getProcessedImageEnc() {
+    return this->processed.type();
 }
 
 cv::Scalar LOW_HSV_EDGE = cv::Scalar(20, 0, 0);
@@ -80,13 +84,13 @@ cv::Scalar HIGH_HSV = cv::Scalar(35, 255, 255);
 // Scalar HIGH_HSV = Scalar(40, 255, 255);
 
 void removeSmall(cv::Mat& src, cv::Mat& dest, double minRadius) {
-    vector<vector<cv::Point>> contours;
+    vector<vector<cv::Point> > contours;
     cv::findContours(src.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
-    vector<vector<cv::Point>> erase;
+    vector<vector<cv::Point> > erase;
 
     /// Approximate contours to polygons + get bounding rects and circles
-    vector<vector<cv::Point>> contours_poly( contours.size() );
+    vector<vector<cv::Point> > contours_poly( contours.size() );
     // vector<Rect> boundRect( contours.size() );
     // vector<Point2f>center( contours.size() );
     // vector<float>radius( contours.size() );
@@ -94,9 +98,9 @@ void removeSmall(cv::Mat& src, cv::Mat& dest, double minRadius) {
     for( int i = 0; i < contours.size(); i++ ) {
         cv::Point2f center;
         float radius;
-        cv::approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
+        cv::approxPolyDP( cv::Mat(contours[i]), contours_poly[i], 3, true );
         // boundRect[i] = boundingRect( Mat(contours_poly[i]) );
-        cv::minEnclosingCircle( (Mat)contours_poly[i], center, radius );
+        cv::minEnclosingCircle( (cv::Mat)contours_poly[i], center, radius );
         if (radius < minRadius) {
             erase.push_back(contours[i]);
         }
@@ -105,7 +109,7 @@ void removeSmall(cv::Mat& src, cv::Mat& dest, double minRadius) {
     // 
     // dest = Mat::zeros(bw.size(), bw.type());
     dest = src.clone();
-    cv::drawContours(dest, erase, -1, Scalar::all(0), CV_FILLED);    
+    cv::drawContours(dest, erase, -1, cv::Scalar::all(0), CV_FILLED);    
 }
 
 // Get binary thresholded image
@@ -117,7 +121,7 @@ void getBinary(const cv::Mat& src, cv::Scalar& low_HSV, cv::Scalar& hi_HSV, cv::
     cv::Mat bw;
     cv::inRange(frame, low_HSV, hi_HSV, bw);
     
-    cv::removeSmall(bw, dest, 10);
+    removeSmall(bw, dest, 10);
 }
             
 
@@ -185,7 +189,7 @@ void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& 
     //remove small features (probably not lanes)
     removeSmall(mask, mask, 100);
 
-    gtrans.transform(src, this->processed);
+    gtrans.transform(mask, this->processed);
     
     //find lanes in resulting transform and fill in this->lanes 
 }
