@@ -8,7 +8,7 @@
 using namespace cd;
 using namespace cv;
 
-// #define DEBUG
+//#define DEBUG
 
 CurveDetect::CurveDetect(int bh, int bw)
     : boxHeight(bh), boxWidth(bw) {
@@ -238,7 +238,7 @@ void CurveDetect::fitCurve(const Mat& src, const Point& startPt, int maxCurves) 
     Mat roi = Mat(src, getROIRect(startPt));
     //NOTE: this assumes that the curve is at least as big as one box in width and length
     // also assumes width, height >= 2
-    float theta0 = M_PI/2.7;//findBestTheta(roi, Point(boxWidth/2, boxHeight/2), fmin(boxWidth/2, boxHeight/2));
+    float theta0 = M_PI/1.6; //2.7;//findBestTheta(roi, Point(boxWidth/2, boxHeight/2), fmin(boxWidth/2, boxHeight/2));
 
 #ifdef DEBUG
     printf("Best theta: %.02f", theta0);
@@ -257,7 +257,8 @@ void CurveDetect::fitCurve(const Mat& src, const Point& startPt, int maxCurves) 
     Mat show = src.clone();
 #endif
     
-    float theta = theta0;
+    bool firstTime = false;
+    float theta = M_PI/2; //no rotation
     while (pt.x < size.width && pt.y < size.height && curves < maxCurves) {
         float rotation = M_PI/2 - theta;
         //get the region of interest...the region we're looking at
@@ -294,8 +295,12 @@ void CurveDetect::fitCurve(const Mat& src, const Point& startPt, int maxCurves) 
         printf("%f, %f\n", lineAngle, theta);
 #endif
         pt = nextPt;
-        theta = lineAngle + theta;
-
+        if (firstTime) {
+            theta = lineAngle;
+        } else {
+            theta = lineAngle + theta;
+        }
+        firstTime = false;
         points.push_back(pt);
         thetas.push_back(theta);
         curves++;

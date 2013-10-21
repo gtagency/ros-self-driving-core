@@ -7,10 +7,12 @@
 namespace ld {
     class Lane {
     private:
+
         int type;
         std::vector<cv::Point> points;
     public:
-        const std::vector<cv::Point>& getPoints();
+        Lane(const std::vector<cv::Point>& points);
+        const std::vector<cv::Point>& getPoints() const;
 
     };
 }

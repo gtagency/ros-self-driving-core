@@ -7,20 +7,23 @@
 #include "ground_transform.h"
 
 namespace ld {
+
     class LaneExtractCv {
     private:
         std::vector<Lane> lanes;
         cv::Mat processed;
 
-        void doLaneExtraction(const cv::Mat& src, const GroundTransform& gtrans);
+        std::vector<std::pair<cv::Point, int> > findLanes(const cv::Mat& img, int boxHeight, int boxWidth); 
+        Lane extractLane(const cv::Mat& img, cv::Point initialPoint, int boxHeight, int boxWidth); 
+        void annotateImage(cv::Mat& img, const Lane& lane);
+        void doLaneExtraction(const cv::Mat& src, const GroundTransform& gtrans, int maxLanes);
 
+    
     public:
-        LaneExtractCv(const cv::Mat& src, const GroundTransform& gtrans);
+        LaneExtractCv(const cv::Mat& src, const GroundTransform& gtrans, int maxLanes);
         ~LaneExtractCv();
 
-        int numLanes();
-
-        void describeLane(int num, Lane& lane);
+        const std::vector<Lane>& getLanes() const;
 
         const cv::Mat& getProcessedImage();
         int getProcessedImageEnc();

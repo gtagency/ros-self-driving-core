@@ -8,18 +8,15 @@ using namespace ld;
 using namespace cd;
 using namespace std;
 
-LaneExtractCv::LaneExtractCv(const cv::Mat& src, const GroundTransform& gtrans) {
-    doLaneExtraction(src, gtrans);
+LaneExtractCv::LaneExtractCv(const cv::Mat& src, const GroundTransform& gtrans, int maxLanes) {
+    doLaneExtraction(src, gtrans, maxLanes);
 }
 
 LaneExtractCv::~LaneExtractCv() {
 }
 
-int LaneExtractCv::numLanes() {
-    return lanes.size();
-}
-
-void LaneExtractCv::describeLane(int num, Lane& lane) {
+const std::vector<Lane>& LaneExtractCv::getLanes() const {
+    return lanes;
 }
 
 const cv::Mat& LaneExtractCv::getProcessedImage() {
@@ -126,56 +123,62 @@ void getBinary(const cv::Mat& src, cv::Scalar& low_HSV, cv::Scalar& hi_HSV, cv::
     
     removeSmall(bw, dest, 10);
 }
-            
 
+template<template <typename> class P = std::less >
+struct compare_pair_second {
+    template<class T1, class T2> bool operator()(const std::pair<T1, T2>& left, const std::pair<T1, T2>& right) {
+        return P<T2>()(left.second, right.second);
+    }
+};
 
-// void lensTransform(Point& pt, double h, double cameraAngle, double& vec[2]) {
-// }
-// void groundTransform(Point& framePt, Point& groundPt, double h, double cameraAngle) {
-//     double vec[2];
-//     lensTransform(framePt, h, cameraAngle, vec);
-//     double x = sqrt( (pow(-h / cos(vec[0]), 2) - pow(h, 2))
-//                       / (1 + pow(tan(vec[1]), 2)) );
-//     double y = x * tan(phi);
-//     
-// }
+std::vector<std::pair<Point, int> > LaneExtractCv::findLanes(const Mat& img, int boxHeight, int boxWidth) {
+    int boxWidthHalf = boxWidth/2;
+    cv::Size size = img.size();
+    printf("Size: %d, %di\n", size.height, size.width);
+    int rTop = size.height * 19 / 20; // - boxHeight - 20;
+    int startX = -1;
+    int midLine = size.width / 2;
+    std::vector<std::pair<Point, int> > pointsWithScore;
 
-// void groundTransform(Mat& src, Mat& ground) {
-//     int width = 1280;
-//     int height = 720;
-//     
-//     int x_res = 400;
-//     int y_res = 400;
-// 
-//     ground = Mat::zeros(cvSize(x_res, y_res), src.type());
-// 
-//     double groundWidth = 20.0; //ft
-//     double groundHeight = 20.0; //ft
-//     double h = 21.0/12.0; //ft
-//     double deg_fov = 120.0;
-//     double phi_scale = 100000 * (M_PI / 180) * (deg_fov / width);
-//     double theta_scale = 100000 * (M_PI / 180) * (deg_fov / width);
-//     int x_frame_off = width/2;
-//     int y_frame_off = 0;
-//     
-//     for (int x = 0; x < x_res; x++) {
-//         for (int y = 0; y < y_res; y++) {
-//             double x_ground = x / groundWidth - (groundWidth/2);
-//             double y_ground = y / groundHeight;
-//             
-//             double theta = acos(-h/ sqrt(pow(x_ground, 2) + pow(y_ground, 2) + pow(h, 2)));
-//             double phi = atan2(y_ground, x_ground);
-//             int x_frame = phi * phi_scale + x_frame_off;
-//             int y_frame = theta * theta_scale + y_frame_off;
-//             ground.at<double>(y, x) = src.at<double>(y_frame, x_frame);
-//             if (x == 0 && y == 0) {
-//                 printf("%d, %d, %f, %f, %f, %f, %f\n", x_frame, y_frame, src.at<double>(y_frame, x_frame), theta, phi, theta_scale, phi_scale);
-//             }
-//         }
-//     }   
-// }
+    int laneEdgeThreshold = 5000;
+    //slide a window across the bottom of the image to try and find the area with the biggest split between dense
+    // and not dense...this would be a good place to look for edges
+    //TODO: catch and handle exceptions!@
+    for (int c = 0; c < size.width - boxWidth; c++) {
+        Rect rectL = Rect(c,                rTop, boxWidthHalf, boxHeight);
+        Rect rectR = Rect(c + boxWidthHalf, rTop, boxWidthHalf, boxHeight);
+        Mat tileL = Mat(img, rectL);
+        Mat tileR = Mat(img, rectR);
+        cv::Scalar diff = sum(tileL - tileR);
+        //c is the start column...we want the midpoint of the box
+        int potential = c + boxWidthHalf - 1;
+        int score = abs(diff.val[0]);
+        if (score > laneEdgeThreshold) { 
+            printf("%f\n", abs(diff.val[0]));
+            pointsWithScore.push_back(std::pair<Point, int>(Point(potential, rTop + boxHeight/2), score));
+        }
+    }
 
-void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& gtrans) {
+    return pointsWithScore;
+}
+
+Lane LaneExtractCv::extractLane(const cv::Mat& img, cv::Point initialPoint, int boxHeight, int boxWidth) {
+    CurveDetect cd = CurveDetect(boxHeight, boxWidth);
+    cd.fitCurve(img, initialPoint, 20);
+    return Lane(cd.getPointsOnCurve());
+}
+
+void LaneExtractCv::annotateImage(cv::Mat& img, const Lane& lane) {
+    std::vector<Point>::const_iterator it = lane.getPoints().begin();
+    Point pt = *it;
+    while (++it != lane.getPoints().end()) {
+        Point nextPt = *it;
+        printf ("Line from (%d, %d) to (%d, %d)\n", pt.x, pt.y, it->x, it->y);
+        line(img, pt, nextPt, Scalar(255, 0, 0), 2);
+        pt = nextPt;
+    }
+}
+void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& gtrans, int maxLanes) {
     
     cv::Mat srcGray, mask, thold, edge, edgeMask;
     cv::cvtColor(src, srcGray, CV_BGR2GRAY);
@@ -192,50 +195,47 @@ void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& 
     //remove small features (probably not lanes)
     removeSmall(mask, mask, 100);
 
-    gtrans.transform(mask, this->processed);
-/*
-yRange = (size(rgb_frame, 1) - box_height):size(rgb_frame, 1);
-for i = (box_width/2):(size(rgb_frame, 2) - box_width/2)
-    xRangeL = uint32(i - box_width/2 + 1):i;
-    xRangeR = i:uint32(i + box_width/2);
-    tileL = rgb_frame(yRange, xRangeL);
-    tileR = rgb_frame(yRange, xRangeR);
-    if abs(sum(tileL(:)) - sum(tileR(:))) > 3000
-        x = i
-        abs(sum(tileL(:)) - sum(tileR(:)))
-        plot(i,(size(rgb_frame, 1) - box_height),'r','LineWidth',1.5);
-    end
-end
-*/
-    int boxWidth = 10;
-    int boxWidthHalf = boxWidth/2;
+    Mat proj;
+    gtrans.transform(mask, proj);
+   
+    //create a color image, to be annotated with information about the lane
+    // extraction 
+    cvtColor(proj, this->processed, CV_GRAY2BGR);
+
+    //find lanes in resulting transform and fill in this->lanes 
     int boxHeight = 20;
-    cv::Size size = this->processed.size();
-    int rTop = size.height - boxHeight;
-    int startX = -1;
-    for (int c = boxWidthHalf + 1; c < size.width - boxWidthHalf; c++) {
-        Rect rectL = Rect(c,                rTop, boxWidthHalf, boxHeight);
-        Rect rectR = Rect(c + boxWidthHalf, rTop, boxWidthHalf, boxHeight);
-        Mat tileL = Mat(this->processed, rectL);
-        Mat tileR = Mat(this->processed, rectR);
-        cv::Scalar diff = sum(tileL - tileR);
-        if (abs(diff.val[0]) > 3000) {
-            startX = c;
+    int boxWidth = 10;
+    std::vector<std::pair<Point, int> > pointsWithScore = findLanes(proj, boxHeight, boxWidth);
+
+    std::sort(pointsWithScore.begin(), pointsWithScore.end(), compare_pair_second<std::less>());
+    std::vector<cv::Point> lanePoints;
+    int ii = 0;
+    //filter the lanes down, and annotate the image
+    for (std::vector<std::pair<cv::Point, int> >::iterator it = pointsWithScore.begin();
+         it != pointsWithScore.end();
+         it++, ii++) {
+        if (ii < maxLanes) {
+            lanePoints.push_back(it->first);
         }
-    }
-
-    cv::Point initialPoint = cv::Point(startX, size.height - boxHeight/2); 
-    CurveDetect cd = CurveDetect(boxHeight, boxWidth);
-
-    cd.fitCurve(this->processed, initialPoint, 20);
-    std::vector<Point>::iterator it = cd.getPointsOnCurve().begin();
-    Point pt = *it;
-    while (++it != cd.getPointsOnCurve().end()) {
-        Point nextPt = *it;
-        printf ("Line from (%d, %d) to (%d, %d)\n", pt.x, pt.y, it->x, it->y);
-        line(this->processed, pt, nextPt, Scalar(127, 127, 127));
-        pt = nextPt;
+        circle(this->processed, it->first, 2, Scalar(0, 0, 255), 2);
     }
     
-    //find lanes in resulting transform and fill in this->lanes 
+    for (std::vector<Point>::iterator it = lanePoints.begin();
+         it != lanePoints.end();
+         it++) {
+        Point start = *it;
+        printf("Potential lane at (%d, %d)\n", start.x, start.y);
+        circle(this->processed, start, 2, Scalar(0, 255, 0), 2);
+        double t = (double)getTickCount();
+        try {
+            //TODO: this is currently pretty slow
+            Lane lane = extractLane(proj, start, boxHeight, boxWidth);
+            lanes.push_back(lane);
+            annotateImage(this->processed, lane);
+        } catch (cv::Exception& ex) {
+            printf("Could not detect lane at (%d, %d)!\n", start.x, start.y);
+        }
+        t = ((double)getTickCount() - t)/getTickFrequency();
+        cout << "Times passed in seconds: " << t << endl;
+    }
 }

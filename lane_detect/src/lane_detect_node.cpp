@@ -34,6 +34,29 @@ void projDisconnectCallback(const ros::SingleSubscriberPublisher&) {
   ROS_INFO("disconnectCallback");
 }
 */
+
+geometry_msgs::Point32 cvtCvPointToROSPoint(const cv::Point& point) {
+    geometry_msgs::Point32 point32;
+    point32.x = point.x;
+    point32.y = point.y;
+    point32.z = 0;
+    return point32;
+}
+
+std::vector<geometry_msgs::Polygon> buildPolygonsFromLane(const Lane& lane) {
+    std::vector<geometry_msgs::Polygon> polys;
+    std::vector<cv::Point>::const_iterator it = lane.getPoints().begin();
+    cv::Point pt = *it;
+    while (++it != lane.getPoints().end()) {
+        geometry_msgs::Polygon poly;
+        cv::Point nextPt = *it;
+        poly.points.push_back(cvtCvPointToROSPoint(pt));
+        poly.points.push_back(cvtCvPointToROSPoint(nextPt));
+        polys.push_back(poly);
+        pt = nextPt;
+    }
+    return polys;
+}
 void imageCallback(const sensor_msgs::ImageConstPtr& image) {
     cv_bridge::CvImagePtr cv_ptr;
     try {
@@ -42,9 +65,10 @@ void imageCallback(const sensor_msgs::ImageConstPtr& image) {
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
-    
+  
+    int maxLanes = 3;  
     GroundTransformSphere gtrans;
-    LaneExtractCv le(cv_ptr->image, gtrans);
+    LaneExtractCv le(cv_ptr->image, gtrans, maxLanes);
 
     //publish the processed/projected image if there are
     // any listeners
@@ -55,27 +79,20 @@ void imageCallback(const sensor_msgs::ImageConstPtr& image) {
         procImage.image = le.getProcessedImage();
         procImage.encoding = getRosType(le.getProcessedImageEnc());
         procImage_pub.publish(procImage.toImageMsg());
+    } else {
+        ROS_INFO("No subscribers.  Suppressing processed image.");
     }
     
     ObstacleArrayStamped msg;
     //fill in timestamp info TODO
-    for (int ii = 0; ii < le.numLanes(); ii++) {
-        Lane lane;
-        le.describeLane(ii, lane);
+    for (std::vector<Lane>::const_iterator it = le.getLanes().begin();
+         it != le.getLanes().end();
+         it++) {
         
         Obstacle obstacle;
-        geometry_msgs::Polygon poly;
-        for (std::vector<cv::Point>::const_iterator it = lane.getPoints().begin();
-             it != lane.getPoints().end();
-             ++it) {
-            geometry_msgs::Point32 p32;
-            p32.x = it->x;
-            p32.y = it->y;
-            p32.z = 0;
-            poly.points.push_back(p32);
-        }
+        std::vector<geometry_msgs::Polygon> polys = buildPolygonsFromLane(*it);
         obstacle.type = Obstacle::TYPE_LANE;
-        obstacle.polygons.push_back(poly);
+        obstacle.polygons.insert(obstacle.polygons.end(), polys.begin(), polys.end());
         msg.obstacles.push_back(obstacle);
     }
     lanePoly_pub.publish(msg);
