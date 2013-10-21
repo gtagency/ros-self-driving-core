@@ -82,11 +82,11 @@ include_directories(
 ## Declare a cpp executable
 add_executable(lane_detect_node
   src/lane_detect_node.cpp
-  src/point.cpp
   src/lane.cpp
   src/lane_extract_cv.cpp
   src/ground_transform_sphere.cpp
   src/cv_bridge_ex.cpp
+  src/curve_detect.cpp
 )
 
 ## Add cmake target dependencies of the executable/library
