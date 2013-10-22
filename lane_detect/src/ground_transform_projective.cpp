@@ -5,9 +5,9 @@ using namespace ld;
 using namespace cv;
 
 void GroundTransformProjective::transform(const Mat& input, Mat& output) const {
-    CvSize input_size = input.size;
 
     // resolution of the input image in the camera frame
+    const CvSize input_size = input.size;
     const int input_x_res = input_size.width;
     const int input_y_res = input_size.height;
 
@@ -16,6 +16,10 @@ void GroundTransformProjective::transform(const Mat& input, Mat& output) const {
     const int output_y_res = 800;
 
     // dimensions of the ground frame we are sampling from
+    // ground frame is the rectangle from
+    //   (-ground_output_x_dim / 2, 0)
+    //   to (ground_output_x_dim, ground_output_y_dim)
+    //   i.e. (-15 ft, 0 ft) to (15 ft, 30 ft)
     const double ground_output_y_dim = 30.0; // ft
     const double ground_output_x_dim = 30.0; // ft
 
@@ -24,6 +28,10 @@ void GroundTransformProjective::transform(const Mat& input, Mat& output) const {
     const double camera_pitch = M_PI_2; // radians from vertical -- ADJUST ME
 
     ground = Mat::zeros(cvSize(x_res, y_res), src.type());
+    
+    // compute trig outside of the loop for such fastness
+    const double cos_camera_pitch = cos(camera_pitch);
+    const double sin_camera_pitch = sin(camera_pitch);
     
     for (int output_x = 0; output_x < output_x_res; output_x++) {
         for (int output_y = 0; y < output_y_res; output_y++) {
@@ -34,15 +42,21 @@ void GroundTransformProjective::transform(const Mat& input, Mat& output) const {
             const double z_ground = - 21.0 / 12.0;
 
             // camera frame (post-transform) coordinates of ground sample point
-            const double x_camera = camera_scale * x_ground;
-            const double y_camera = camera_scale * (y_ground * cos(camera_pitch) - z_ground * sin(camera_pitch));
-            const double z_camera = y_ground * sin(camera_pitch) + z_ground * cos(camera_pitch);
+            const double x_camera = x_ground;
+            const double y_camera = y_ground * cos_camera_pitch - z_ground * sin_camera_pitch;
+            const double z_camera = y_ground * sin_camera_pitch + z_ground * cos_camera_pitch;
+
+            if (z_camera <= 0.0) {
+                // don't divide by zero or look behind the camera
+                continue;
+            }
 
             // input image coordinates
-            int input_x = (x_camera / z_camera) + (input_x_res / 2);
-            int input_y = (y_camera / z_camera) + (input_y_res / 2);
+            const int input_x = camera_scale * (x_camera / z_camera) + (input_x_res / 2);
+            const int input_y = camera_scale * (y_camera / z_camera) + (input_y_res / 2);
             
             if (input_y < 0 || input_y >= input_y_res || input_x < 0 || input_x >= input_x_res) {
+                // don't sample outside the camera frame
                 continue;
             }
 
