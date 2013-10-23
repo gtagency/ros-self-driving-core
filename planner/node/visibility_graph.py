@@ -52,7 +52,9 @@ class VisibilityGraphPlanningStrategy:
         return visibility_graph.Point(0, 0)
 
     def plan(self, polygons, start, goal, width = 0):
-        return visibility_graph(polygons, start, goal, width)
+        graph = visibility_graph(polygons, start, goal, width)
+        
+        return graph_search(graph[0], graph[1], start, goal)
 
 # Returns a list of vertices and edges forming a visibility graph
 def visibility_graph(polygons, start, goal, width = 0):
@@ -80,7 +82,7 @@ def visibility_graph(polygons, start, goal, width = 0):
 	concave_points = find_concave_points(graph, polygons)
 	graph = remove_points_from_graph(graph, concave_points)
 
-    return graph_search(graph[0], graph[1], start, goal)
+    return graph
 
 
 # Expands all polygons by the given width
