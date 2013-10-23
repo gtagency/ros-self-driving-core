@@ -11,7 +11,8 @@ from std_msgs.msg import Float64
 from geometry_msgs.msg import Point32
 from sensor_msgs.msg import NavSatFix
 
-import visibili
+import visibility_graph
+
 # Global allowed error for movement
 MAX_ERROR = 0
 
@@ -21,7 +22,7 @@ path_pub = None
 # Global state holders
 brain_state = brain_state.BrainState()
 world_model = world_model.WorldModel()
-path_planner = path_planner.PathPlanner()
+path_planner = path_planner.PathPlanner(visibility_graph.VisibilityGraphPlanningStrategy())
 
 class GlobalPoint:
     latitude = None
@@ -68,10 +69,11 @@ def calc_destination_direction():
 def update_obstacles(obstacles_data):
 	global world_model, brain_state, path_planner
 
-	obstacles = obstacles_data.data.obstacles
+	obstacles = convert_obstacles(obstacles_data.data.obstacles)
+    lanes     = get_lanes(obstacles_data.data.obstacles)
 	new_time = obstacles_data.data.header.stamp
 
-    model_delta = world_model.update(obstacles, new_time)
+    model_delta = world_model.update(obstacles, lanes, new_time)
 	dest_dir = calc_destination_direction()
 
 	plan = None
@@ -79,7 +81,7 @@ def update_obstacles(obstacles_data):
 	if movement_validator.movement_valid(brain_state.velocity.value, model_delta, MAX_ERROR):
 		plan = path_planner.update_plan(model_delta, dest_dir)
 	else:
-		plan = path_planner.plan_new_path(world_model.obstacles, dest_dir)
+		plan = path_planner.plan_new_path(world_model, dest_dir)
 
 	if plan != None:
 		path_pub.publish(plan)

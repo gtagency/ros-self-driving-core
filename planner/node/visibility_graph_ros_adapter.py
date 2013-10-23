@@ -7,10 +7,10 @@ import visibility_graph
 # Converts an ObstacleArrayStamped to Polygon structures
 def convert_obstacles(self, obstacles):
     new_obstacles = []
+    # NOTE: this gets all obstacles, including lanes
     for obstacle in obstacles.obstacles:
-        if obstacle.type == obstacle.TYPE_OBSTACLE:
-            for old_polygon in obstacle.polygons:
-                new_obstacles.append(convert_polygon(old_polygon))
+        for old_polygon in obstacle.polygons:
+            new_obstacles.append(convert_polygon(old_polygon))
     return new_obstacles
 
 # Returns lanes where each lane is represented by intersection points with the world boundaries
