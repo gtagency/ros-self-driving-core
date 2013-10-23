@@ -3,12 +3,14 @@
 
 import rospy
 from sensor_msgs.msg import NavSatFix
+from geometry_msgs.msg import Point
+
 from testing.srv import *
 
 from threading import Thread
 from multiprocessing import Process
 import time
-
+import math
 import signal
 import sys
 def signal_handler(signal, frame):
@@ -21,42 +23,61 @@ class GpsSim(object):
     def __init__(self):
         rospy.init_node("gps_sim")
         self.fixPub = rospy.Publisher("fix", NavSatFix)
+        rospy.Subscriber("moveTowards", Point, self.handleMoveTowards)
         rospy.Service("playControl", PlayControl, self.handlePlayControl)
         rospy.Service("setup", GpsSimSetup, self.handleGpsSimSetup)
 
-        self.startLat = None
-        self.startLon = None
+        self.startLat = rospy.get_param("~startLat", None)
+        self.startLon = rospy.get_param("~startLon", None)
         self.endLat   = None
         self.endLon   = None
-        self.curLat   = None
-        self.curLon   = None
-        self.curTime  = None
-        self.velocity = [0, 0] 
-        self.updateRateSecs = None
+        self.curLat   = self.startLat
+        self.curLon   = self.startLon
+        self.velocity = rospy.get_param("~velocity", None)
+        updateRateMS = rospy.get_param("~updateRateMS", None)
+        if updateRateMS:
+            self.updateRateSecs = updateRateMS/1000.0
         self.lastTime = None
+        self.curTime  = None
         
-        self.playing = False
-        self.isSetup = False
+        self.lastTime = time.time()
+        self.playing = rospy.get_param("~startImmediately", False) 
+        self.testIfSetup()
 
-#//        t = Thread(target=self.doWork)
- # //      t.start()
+        rospy.loginfo("Initial parameters set:")
+        if self.startLat and self.startLon:
+            rospy.loginfo("start: %f, %f" % (self.startLat, self.startLon))
+        if self.endLat and self.endLon:
+            rospy.loginfo("end: %f, %f" % (self.endLat, self.endLon))
+        print self.velocity
+        if self.velocity:
+            rospy.loginfo("velocity (magnitude) %d m/s" % self.velocity)
+        if self.updateRateSecs:
+            rospy.loginfo("with %f second updates" % self.updateRateSecs)
+        
+        rospy.loginfo("Setup: %s, Playing: %s", self.isSetup, self.playing)
+
+    def testIfSetup(self):
+        self.isSetup = self.startLat and self.startLon and self.endLat and self.endLon and self.velocity and self.updateRateSecs
 
     def doWork(self):
         while True:
-            rospy.logdebug("looping")
+            print("looping")
             # if no configuration set, just sleep for 1 second
             delay = self.updateRateSecs if self.updateRateSecs else 1.0
             time.sleep(delay)
             
             self.curTime = time.time()
-            if self.playing:
+            if self.isSetup and self.playing:
                 rospy.logdebug("Here we go")
                 elapsed = self.curTime - self.lastTime
                 self.lastTime = self.curTime
-                displacement = [v * elapsed for v in self.velocity]
+                theta = math.atan2(self.endLat - self.curLat, self.endLon - self.curLon)
                 # because the size of one degree
-                self.curLat += (displacement[0] / self.calcLatDegreeLength(self.curLat, self.curLon))
-                self.curLon += (displacement[1] / self.calcLonDegreeLength(self.curLat, self.curLon))
+                self.curLat += (self.velocity * math.sin(theta) / self.calcLatDegreeLength(self.curLat, self.curLon))
+                self.curLon += (self.velocity * math.cos(theta) / self.calcLonDegreeLength(self.curLat, self.curLon))
+                self.publishCurLatLon()
+            elif self.curLat and self.curLon:
                 self.publishCurLatLon()
 
     def calcLatDegreeLength(self, lat, lon):
@@ -74,11 +95,16 @@ class GpsSim(object):
         msg.longitude = self.curLon
         # very small error for now
         msg.position_covariance = [0]*9
-        msg.position_covariance[0] = 1
-        msg.position_covariance[3] = 1
+        msg.position_covariance[0] = 15**2
+        msg.position_covariance[3] = 15**2
         rospy.loginfo("Publishing position %f, %f at time %f", self.curLat, self.curLon, self.curTime)
  
         self.fixPub.publish(msg)
+
+    def handleMoveTowards(self, data):
+        self.endLat = data.x
+        self.endLon = data.y
+        self.testIfSetup()
     
     def handlePlayControl(self, req):
         if self.isSetup:
@@ -100,7 +126,7 @@ class GpsSim(object):
         
         self.velocity = req.velocity # 2-vector, meters per second
         self.updateRateSecs = req.updateRateMS/1000.0
-        self.isSetup = True
+        self.testIfSetup()
         rospy.loginfo("Setup complete.  Simulating navigation from %f, %f to %f, %f at x, y velocities %d, %d with %f second updates"
                     % (self.startLat, self.startLon, self.endLat, self.endLon, self.velocity[0], self.velocity[1], self.updateRateSecs))
 
