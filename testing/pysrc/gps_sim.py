@@ -106,8 +106,8 @@ class GpsSim(object):
         msg.longitude = self.curLon
         # very small error for now
         msg.position_covariance = [0]*9
-        msg.position_covariance[0] = 15**2
-        msg.position_covariance[3] = 15**2
+        msg.position_covariance[0] = 5**2
+        msg.position_covariance[3] = 5**2
         rospy.loginfo("Publishing position %f, %f at time %f", self.curLat, self.curLon, self.curTime)
  
         self.fixPub.publish(msg)
