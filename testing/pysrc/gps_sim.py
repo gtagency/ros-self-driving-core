@@ -27,24 +27,34 @@ class GpsSim(object):
         rospy.Service("playControl", PlayControl, self.handlePlayControl)
         rospy.Service("setup", GpsSimSetup, self.handleGpsSimSetup)
 
-        self.startLat = rospy.get_param("~startLat", None)
-        self.startLon = rospy.get_param("~startLon", None)
-        self.endLat   = None
-        self.endLon   = None
-        self.curLat   = self.startLat
-        self.curLon   = self.startLon
-        self.velocity = rospy.get_param("~velocity", None)
-        updateRateMS = rospy.get_param("~updateRateMS", None)
-        if updateRateMS:
-            self.updateRateSecs = updateRateMS/1000.0
-        self.lastTime = None
-        self.curTime  = None
+        self.setupSimulator(rospy.get_param("~startLat", None),
+                            rospy.get_param("~startLon", None),
+                            rospy.get_param("~endLat", None),
+                            rospy.get_param("~endLon", None),
+                            rospy.get_param("~velocity", None),
+                            rospy.get_param("~updateRateMS", None))
         
         self.lastTime = time.time()
-        self.playing = rospy.get_param("~startImmediately", False) 
-        self.testIfSetup()
+        self.curTime  = self.lastTime
 
-        rospy.loginfo("Initial parameters set:")
+        self.playing = rospy.get_param("~startImmediately", None)
+        rospy.loginfo("Start immediately: %s", self.playing)
+
+    def setupSimulator(self, startLat, startLon, endLat, endLon, velocity, updateRateMS):
+
+        self.startLat = startLat
+        self.startLon = startLon
+        self.endLat   = endLat
+        self.endLon   = endLon
+        self.curLat   = self.startLat
+        self.curLon   = self.startLon
+        self.velocity = velocity
+        self.updateRateMS = updateRateMS
+        if updateRateMS:
+            self.updateRateSecs = updateRateMS/1000.0
+
+        self.testIfSetup()
+        rospy.loginfo("Simulator parameters set:")
         if self.startLat and self.startLon:
             rospy.loginfo("start: %f, %f" % (self.startLat, self.startLon))
         if self.endLat and self.endLon:
@@ -54,31 +64,32 @@ class GpsSim(object):
             rospy.loginfo("velocity (magnitude) %d m/s" % self.velocity)
         if self.updateRateSecs:
             rospy.loginfo("with %f second updates" % self.updateRateSecs)
-        
-        rospy.loginfo("Setup: %s, Playing: %s", self.isSetup, self.playing)
+        if self.isSetup:
+            rospy.loginfo("Setup complete!") 
 
     def testIfSetup(self):
         self.isSetup = self.startLat and self.startLon and self.endLat and self.endLon and self.velocity and self.updateRateSecs
 
     def doWork(self):
         while True:
-            print("looping")
             # if no configuration set, just sleep for 1 second
             delay = self.updateRateSecs if self.updateRateSecs else 1.0
             time.sleep(delay)
             
             self.curTime = time.time()
-            if self.isSetup and self.playing:
-                rospy.logdebug("Here we go")
-                elapsed = self.curTime - self.lastTime
-                self.lastTime = self.curTime
-                theta = math.atan2(self.endLat - self.curLat, self.endLon - self.curLon)
-                # because the size of one degree
-                self.curLat += (self.velocity * math.sin(theta) / self.calcLatDegreeLength(self.curLat, self.curLon))
-                self.curLon += (self.velocity * math.cos(theta) / self.calcLonDegreeLength(self.curLat, self.curLon))
-                self.publishCurLatLon()
-            elif self.curLat and self.curLon:
-                self.publishCurLatLon()
+            if self.playing:
+                if self.isSetup:
+                    elapsed = self.curTime - self.lastTime
+                    self.lastTime = self.curTime
+                    theta = math.atan2(self.endLat - self.curLat, self.endLon - self.curLon)
+                    # because the size of one degree
+                    self.curLat += (self.velocity * math.sin(theta) / self.calcLatDegreeLength(self.curLat, self.curLon))
+                    self.curLon += (self.velocity * math.cos(theta) / self.calcLonDegreeLength(self.curLat, self.curLon))
+                    self.publishCurLatLon()
+                elif self.curLat and self.curLon:
+                    # even if we're not set up, we need to publish our current position
+                    # as that may bootstrap another part of the system
+                    self.publishCurLatLon()
 
     def calcLatDegreeLength(self, lat, lon):
         m_per_mi = 1600
@@ -117,18 +128,7 @@ class GpsSim(object):
             rospy.logerror("Unable to control play.  Simulator not setup.")
 
     def handleGpsSimSetup(self, req):
-        self.startLat = req.startLat
-        self.startLon = req.startLon
-        self.curLat   = req.startLat
-        self.curLon   = req.startLon
-        self.endLat   = req.endLat
-        self.endLon   = req.endLon
-        
-        self.velocity = req.velocity # 2-vector, meters per second
-        self.updateRateSecs = req.updateRateMS/1000.0
-        self.testIfSetup()
-        rospy.loginfo("Setup complete.  Simulating navigation from %f, %f to %f, %f at x, y velocities %d, %d with %f second updates"
-                    % (self.startLat, self.startLon, self.endLat, self.endLon, self.velocity[0], self.velocity[1], self.updateRateSecs))
+        self.setupSimulator(req.startLat, req.startLon, req.endLat, req.endLon, req.velocity, req.updateRateMS)
 
 def main():
     signal.signal(signal.SIGINT, signal_handler)
