@@ -1,0 +1,7 @@
+float64 startLat
+float64 startLon
+float64 endLat
+float64 endLon
+float64[2] velocity
+uint32 updateRateMS
+---
