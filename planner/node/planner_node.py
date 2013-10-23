@@ -11,6 +11,7 @@ from std_msgs.msg import Float64
 from geometry_msgs.msg import Point32
 from sensor_msgs.msg import NavSatFix
 
+import visibili
 # Global allowed error for movement
 MAX_ERROR = 0
 
