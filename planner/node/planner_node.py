@@ -38,61 +38,65 @@ def node():
     rospy.Subscriber('next_waypoint', Point, update_destination)
     rospy.Subscriber('fix', NavSatFix, update_position)
     rospy.Subscriber('vel', Float64, update_velocity)
-    print "Planner active"
+    rospy.loginfo("Planner active")
     rospy.spin()
 
 def calc_destination_direction():
     global brain_state
     dest_dir = 0
-	dx = brain_state.current_destination.longitude - brain_state.current_location.longitude
-	dy = brain_state.current_destination.latitude  - brain_state.current_location.latitude
-	if dx == 0:
-		if current_location.longitude < current_destination.latitude:
-			dest_dir = 0
-		else:
-			dest_dir = math.pi
-	else:
-		dest_dir = math.atan(dy / dx)
-		if current_location.longitude > current_destination.longitude:
-			dest_dir += math.pi
-		elif current_location.latitude > current_destination.latitude:
-			dest_dir += math.pi * 2
+	(dx, dy) = brain_state.getDistanceToGoal()
+#	
+#	if dx == 0:
+#		if current_location.longitude < current_destination.latitude:
+#			dest_dir = 0
+#		else:
+#			dest_dir = math.pi
+#	else:
+#		dest_dir = math.atan(dy / dx)
+#		if current_location.longitude > current_destination.longitude:
+#			dest_dir += math.pi
+#		elif current_location.latitude > current_destination.latitude:
+#			dest_dir += math.pi * 2
 
+    dest_dir = math.atan2(dy, dx)
+    # wrap negative angles around to be between 0 and pi
+    if dest_dir < 0:
+        dest_dir = math.pi + dest_dir
     return dest_dir
 
 def update_obstacles(obstacles_data):
 	global world_model, brain_state, path_planner
+
 	obstacles = obstacles_data.data.obstacles
 	new_time = obstacles_data.data.header.stamp
 
+    model_delta = world_model.update(obstacles, new_time)
 	dest_dir = calc_destination_direction()
 
 	plan = None
-	if movement_validator.movement_valid(world_model.velocity, new_time - brain_state.last_update_time, world_model.obstacles, obstacles, MAX_ERROR):
-		plan = path_planner.update_plan(obstacles, brain_state.last_update_time, brain_state.velocity, dest_dir)
+    # TODO: why is this separate from the path_planner?
+	if movement_validator.movement_valid(brain_state.velocity.value, model_delta, MAX_ERROR):
+		plan = path_planner.update_plan(model_delta, dest_dir)
 	else:
-		plan = path_planner.plan_new_path(obstacles, dest_dir)
-
-	world_model.obstacles = obstacles
-	brain_state.last_update_time = new_time
+		plan = path_planner.plan_new_path(world_model.obstacles, dest_dir)
 
 	if plan != None:
 		path_pub.publish(plan)
 
 def update_destination(destination_data):
-	brain_state.current_destination = GlobalPoint(destination_data.data.y, destination_data.data.x)
+	gpt = GlobalPoint(destination_data.data.y, destination_data.data.x)
+    brain_state.updateCurrentDestination(gpt, destination_data.data.header.stamp)
 
 	dest_dir = calc_destination_direction()
 
 	path_pub.publish(path_planner.plan_new_path(world_model.obstacles, dest_dir))
 
 def update_velocity(velocity_data):
-	brain_state.velocity = velocity_data.data
+	brain_state.updateVelocity(velocity_data.data, position_data.data.header.stamp
 
 def update_position(position_data):
-	brain_state.current_location = GlobalPoint(position_data.data.y, position_data.data.x)
-	# TODO format needed
-	pass
+	gpt = GlobalPoint(position_data.data.y, position_data.data.x)
+	brain_state.updateCurrentLocation(gpt, position_data.data.header.stamp
 
 if __name__ == "__main__":
     node()
