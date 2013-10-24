@@ -14,7 +14,8 @@
 #include <cv_bridge/cv_bridge.h>
 
 #include "lane_extract_cv.h"
-#include "ground_transform_sphere.h"
+//#include "ground_transform_sphere.h"
+#include "ground_transform_projective.h"
 
 #include "cv_bridge_ex.h"
 
@@ -67,7 +68,8 @@ void imageCallback(const sensor_msgs::ImageConstPtr& image) {
     }
   
     int maxLanes = 3;  
-    GroundTransformSphere gtrans;
+    //GroundTransformSphere gtrans;
+    GroundTransformProjective gtrans;
     LaneExtractCv le(cv_ptr->image, gtrans, maxLanes);
 
     //publish the processed/projected image if there are

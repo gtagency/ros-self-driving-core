@@ -85,6 +85,7 @@ add_executable(lane_detect_node
   src/lane.cpp
   src/lane_extract_cv.cpp
   src/ground_transform_sphere.cpp
+  src/ground_transform_projective.cpp
   src/cv_bridge_ex.cpp
   src/curve_detect.cpp
 )
