@@ -81,7 +81,7 @@ add_executable(teleop_joy_node src/teleop_joy_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(teleop_joy_node teleop_joy_generate_messages_cpp)
+add_dependencies(teleop_joy_node core_msgs_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(teleop_joy_node

@@ -80,7 +80,7 @@ include_directories(
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(teleop_key_node teleop_key_generate_messages_cpp)
+add_dependencies(teleop_key_node core_msgs_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(teleop_key_node
