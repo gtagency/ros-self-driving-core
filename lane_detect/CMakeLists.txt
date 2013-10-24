@@ -92,7 +92,7 @@ add_executable(lane_detect_node
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(lane_detect_node lane_detect_generate_messages_cpp)
+add_dependencies(lane_detect_node core_msgs_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(lane_detect_node
