@@ -99,7 +99,7 @@ def update_velocity(velocity_data):
 
 def update_position(position_data):
 	gpt = GlobalPoint(position_data.data.y, position_data.data.x)
-	brain_state.updateCurrentLocation(gpt, position_data.data.header.stamp
+	brain_state.updateCurrentLocation(gpt, position_data.data.header.stamp)
 
 if __name__ == "__main__":
     node()
