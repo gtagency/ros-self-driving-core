@@ -40,6 +40,7 @@ add_service_files(
   FILES
   GpsSimSetup.srv
   PlayControl.srv
+  PublishImage.srv
 )
 
 ## Generate added messages and services with any dependencies listed here
