@@ -34,7 +34,6 @@ def node():
     rospy.init_node('planner')
     path_pub = rospy.Publisher('planned_path', Path)
     rospy.Subscriber('obstacles', ObstacleArrayStamped, update_obstacles)
-    # TODO assuming type here
     rospy.Subscriber('next_waypoint', Point, update_destination)
     rospy.Subscriber('fix', NavSatFix, update_position)
     rospy.Subscriber('vel', Float64, update_velocity)
@@ -91,8 +90,6 @@ def update_velocity(velocity_data):
 
 def update_position(position_data):
 	brain_state.current_location = GlobalPoint(position_data.data.y, position_data.data.x)
-	# TODO format needed
-	pass
 
 if __name__ == "__main__":
     node()

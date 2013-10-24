@@ -49,7 +49,7 @@ def edge_intersect(edge1, edge2):
 		return None
 	return intersect
 
-# Converts a single Obstacle to a Polygon structure
+# Converts a single ROS Polygon to a Polygon structure
 def convert_polygon(old_polygon):
 	new_points = []
 	new_edges = []
