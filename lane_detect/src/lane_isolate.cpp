@@ -12,15 +12,22 @@ namespace lane_isolate {
 
 //TODO: REFACTOR THE HELL OUT OF THIS
 
-static void addEndpoints(const Vec4f& line, std::vector<Point>& points) {
+static void addEndpoints(const Vec4f& line, std::vector<Point>& points, bool front) {
 	const double yint1 = 0;
 	const double xint1 = line[2] + (yint1 - line[3]) / line[1] * line[0];
 	
 	const double yint2 = line[3];
 	const double xint2 = line[2];
 
-    points.push_back(Point(xint1, yint1));
-    points.push_back(Point(xint2, yint2));
+    if (front) {
+        std::vector<Point> new_points;
+        new_points.push_back(Point(xint1, yint1));
+        new_points.insert(new_points.end(), points.begin(), points.end());
+        points = new_points;
+    } else {
+        points.push_back(Point(xint1, yint1));
+    }
+//    points.push_back(Point(xint2, yint2));
 	//cv::line(img, Point(xint1, yint1), Point(xint2, yint2), color, 1, 8);
 }
 
@@ -142,13 +149,13 @@ double laneIsolate(const Mat& input, Mat& output, std::vector<std::vector<Point>
 	Vec4f right_edge;
 	if (right_edge_points.size() > 10) {
 		fitLine(right_edge_points, right_edge, CV_DIST_L2, 0, 0.01, 0.01);
-//        addEndpoints(right_edge, some_points);	
+        addEndpoints(right_edge, right_edge_points, true);	
 		drawLine(output, right_edge, 0x80);
     }
 	Vec4f left_edge;
 	if (left_edge_points.size() > 10) {
 		fitLine(left_edge_points, left_edge, CV_DIST_L2, 0, 0.01, 0.01);
-  //      addEndpoints(left_edge, all_points);	
+        addEndpoints(left_edge, left_edge_points, true);	
 		drawLine(output, left_edge, 0x80);
 	}
 
@@ -169,11 +176,8 @@ double laneIsolate(const Mat& input, Mat& output, std::vector<std::vector<Point>
     Point testPt2 = left_poly[1];
    
     //TODO: may need to be more sophisticated...section parts of the image, or something
-    if (euclidean(firstPt, testPt1) < euclidean(firstPt, testPt2)) {
-    } else {
-        std::reverse(left_poly.begin(), left_poly.end());
-    } 
-        full_poly.insert(full_poly.end(), left_poly.begin(), left_poly.end());
+    std::reverse(left_poly.begin(), left_poly.end());
+    full_poly.insert(full_poly.end(), left_poly.begin(), left_poly.end());
     
     int j = 0;
     //annotate the output image
@@ -194,6 +198,9 @@ double laneIsolate(const Mat& input, Mat& output, std::vector<std::vector<Point>
     polygons.push_back(full_poly);
     return 0;
 
+//this code is more sophisticated...and may need to be revisted if the above doesnt work
+// but it works well for now
+#if 0
     for( int i = 0; i < contours.size(); i++ ) {
         cv::approxPolyDP( cv::Mat(contours[i]), contours_poly[i], 3, true );
 
@@ -235,7 +242,7 @@ double laneIsolate(const Mat& input, Mat& output, std::vector<std::vector<Point>
 	if (right_edge_points.size() > 10 && left_edge_points.size() > 10) {
 		return right_edge[0] - left_edge[0];
 	}
-
+#endif
 	return 0.0;
 }
 
