@@ -78,17 +78,44 @@ static void drawLine(Mat& img, const Vec4f& line, Scalar color) {
 double euclidean(Point pt1, Point pt2) {
     return sqrt(pow(pt2.x - pt1.x, 2) + pow(pt2.y - pt1.y, 2));
 }
+
+int markEdge(const Mat& filled, Mat& output, const Point& pt, std::vector<Point>& all_points, std::vector<Point>& right_edge_points, std::vector<Point>& left_edge_points, int& smooth) {
+
+    if (filled.at<unsigned char>(pt.y, pt.x+0) == 0x00 &&
+		filled.at<unsigned char>(pt.y, pt.x+1) == 0xFF) {
+
+		output.at<unsigned char>(pt.y, pt.x) = 0xFF;
+        all_points.push_back(pt);
+//				if (right_edge_points.size() < 150) {
+			right_edge_points.push_back(pt);
+//				}
+		smooth = 5;
+	}
+	else if (filled.at<unsigned char>(pt.y, pt.x+0) == 0xFF &&
+			 filled.at<unsigned char>(pt.y, pt.x+1) == 0x00) {
+
+		output.at<unsigned char>(pt.y, pt.x) = 0x80;
+        all_points.push_back(pt);
+//				if (left_edge_points.size() < 150) {
+			left_edge_points.push_back(pt);
+//				}
+    }
+}
+
 double laneIsolate(const Mat& input, Mat& output, std::vector<std::vector<Point> >& polygons) {
 	const Size input_size = input.size();
+    printf("in laneIsolate, %d, %d\n", input_size.width, input_size.height);
 	Mat filled = input.clone();
 
     //cvtColor(input, output, CV_GRAY2BGR);
     maskImageByDensity(filled);
+    cout << "Masked" << endl;
 //    return 0;
 	// flood fill potential lane
 	const Point seedPoint(input_size.width / 2, input_size.height / 8);
 	floodFill(filled, seedPoint, 0xC0);
 
+    cout << "Filled" << endl;
 	// separate filled into unknown (0x80), lane (0xFF), and not lane (0x00)
 	for (int y = 0; y < filled.size().height; y++) {
 		for (int x = 0; x < filled.size().width; x++) {
@@ -108,73 +135,64 @@ double laneIsolate(const Mat& input, Mat& output, std::vector<std::vector<Point>
 	vector<Point> left_edge_points;
     vector<Point> all_points;
 
+    cout << "Finding edges" << endl;
 	// find edges of lane
+    int midPoint = filled.size().width / 2;
 	output = Mat::zeros(filled.size(), filled.type());	
 	for (int y = filled.size().height / 8; y < filled.size().height; y++) {
 		int smooth = 0;
-		for (int x = 0; x < filled.size().width; x++) {
+		for (int x = 0; x < midPoint; x++) {
 			if (smooth) {
 				smooth--;
 				continue;
 			}
-			if (filled.at<unsigned char>(y, x+0) == 0x00 &&
-				filled.at<unsigned char>(y, x+1) == 0xFF) {
+            Point pt = Point(midPoint - x, y);
+            markEdge(filled, output, pt, all_points, right_edge_points, left_edge_points, smooth);
 
-				output.at<unsigned char>(y, x) = 0xFF;
-                Point pt = Point(x, y);
-                all_points.push_back(pt);
-//				if (right_edge_points.size() < 150) {
-					right_edge_points.push_back(pt);
-//				}
-				smooth = 5;
-			}
-			else if (filled.at<unsigned char>(y, x+0) == 0xFF &&
-					 filled.at<unsigned char>(y, x+1) == 0x00) {
-
-				output.at<unsigned char>(y, x) = 0x80;
-                Point pt = Point(x, y);
-                all_points.push_back(pt);
-//				if (left_edge_points.size() < 150) {
-					left_edge_points.push_back(pt);
-//				}
-				break;
-			}
+            pt = Point(midPoint + x, y);
+            markEdge(filled, output, pt, all_points, right_edge_points, left_edge_points, smooth);
 		}
 	}
 
 
+    cout << "Fitting lines" << endl;
 	output.at<unsigned char>(0, output.size().width / 2) = 0xC0;
     std::vector<Point> some_points = right_edge_points;
 //    some_points.insert(some_points.end(), left_edge_points.begin(), left_edge_points.end());
 	Vec4f right_edge;
 	if (right_edge_points.size() > 10) {
 		fitLine(right_edge_points, right_edge, CV_DIST_L2, 0, 0.01, 0.01);
-        addEndpoints(right_edge, right_edge_points, true);	
+  //      addEndpoints(right_edge, right_edge_points, true);	
 		drawLine(output, right_edge, 0x80);
     }
 	Vec4f left_edge;
 	if (left_edge_points.size() > 10) {
 		fitLine(left_edge_points, left_edge, CV_DIST_L2, 0, 0.01, 0.01);
-        addEndpoints(left_edge, left_edge_points, true);	
+//        addEndpoints(left_edge, left_edge_points, true);	
 		drawLine(output, left_edge, 0x80);
 	}
 
+    cout << "Contours" << endl;
     vector<vector<cv::Point> > contours;
     cv::findContours(output.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
+    cout << "Polys" << endl;
     /// Approximate contours to polygons + get bounding rects and circles
     vector<vector<cv::Point> > contours_poly( contours.size() );
     std::vector<Point> right_poly, left_poly;
-    cvtColor(filled, output, CV_GRAY2BGR);
+    cvtColor(output, output, CV_GRAY2BGR);
+    cout << "Lines n stuff, " << left_edge_points.size() << ", " << right_edge_points.size() << endl;
     //output = Mat::zeros(output.size(), output.type());
-    cv::approxPolyDP( cv::Mat(left_edge_points),  left_poly,  2, true );
-    cv::approxPolyDP( cv::Mat(right_edge_points), right_poly, 2, true );
-
+    if (left_edge_points.size() > 0) {
+        cv::approxPolyDP( cv::Mat(left_edge_points),  left_poly,  2, true );
+    }
+    if (right_edge_points.size() > 0) {
+        cv::approxPolyDP( cv::Mat(right_edge_points), right_poly, 2, true );
+    }
+    cout << "Testing" << endl;
     std::vector<Point> full_poly = right_poly;
-    Point firstPt = full_poly[0];
-    Point testPt1 = left_poly[0];
-    Point testPt2 = left_poly[1];
    
+    cout << "Drawing lines" << endl;
     //TODO: may need to be more sophisticated...section parts of the image, or something
     std::reverse(left_poly.begin(), left_poly.end());
     full_poly.insert(full_poly.end(), left_poly.begin(), left_poly.end());

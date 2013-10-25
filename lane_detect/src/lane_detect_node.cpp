@@ -1,4 +1,4 @@
-
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -60,18 +60,19 @@ std::vector<geometry_msgs::Polygon> buildPolygonsFromLane(const Lane& lane) {
 }
 void imageCallback(const sensor_msgs::ImageConstPtr& image) {
     cv_bridge::CvImagePtr cv_ptr;
+    std::cout << "Received image" << std::endl;
     try {
         cv_ptr = cv_bridge::toCvCopy(image, enc::BGR8);
     } catch (cv_bridge::Exception& e) {
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
-  
+    std::cout << "Converted image" << std::endl;
     int maxLanes = 3;  
     //GroundTransformSphere gtrans;
     GroundTransformProjective gtrans;
     LaneExtractCv le(cv_ptr->image, gtrans, maxLanes);
-
+    std::cout << "Extracted lanes" << std::endl;
     //publish the processed/projected image if there are
     // any listeners
     if (procImage_pub.getNumSubscribers() > 0) {

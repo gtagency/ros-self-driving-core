@@ -1,9 +1,17 @@
 <launch>
 
     <node pkg="lane_detect" type="lane_detect_node" name="lane_detect" />
+<!--
     <node pkg="testing" type="pub_image.py" name="pub_image">
-        <param name="image_file" value="/mnt/hgfs/ros/data/roadshot.png"/>
+        <param name="image_file" value="/mnt/hgfs/data/roadshot.png"/>
         <remap from="image_raw" to="/image"/>
+    </node> -->
+    <node pkg="testing" type="pub_video.py" name="pub_video">
+        <param name="video_file" value="/mnt/hgfs/data/bigcarrun1.mov"/>
+       <!-- <remap from="image_raw" to="/image"/> -->
+    </node>
+    <node pkg="image_proc" type="image_proc" name="image_proc">
+        <remap from="image_color" to="/image"/>
     </node>
     <node pkg="image_view" type="image_view" name="image_view">
         <remap from="image" to="/image_processed"/>

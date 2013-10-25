@@ -194,20 +194,22 @@ void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& 
     // removeSmall(edgeMask, edgeMask, 50);
     //binary threshold for the really bright stuff
     threshold( srcGray, thold, 220, 255, 0);
-    // printf("%d, %d, %d", thold.size().width, thold.size().height, thold.channels());
-    // printf("%d, %d, %d", maskA.size().width, maskA.size().height, maskA.channels());
+    printf("%d, %d, %d\n", thold.size().width, thold.size().height, thold.channels());
+    printf("%d, %d, %d\n", mask.size().width, mask.size().height, mask.channels());
     mask = mask + thold + edgeMask;
     //remove small features (probably not lanes)
-    //removeSmall(mask, mask, 100);
+    removeSmall(mask, mask, 100);
 
 	GroundTransformProjective gtrans;
 
     Mat proj;
     gtrans.transform(mask, proj, 0.0);
-
+#if 1
+    cout << "Transformed" << endl;
     std::vector<std::vector<Point> > polygons;
 	Mat isolated;
     double err = laneIsolate(proj, isolated, polygons);
+    cout << "Lanes isolated" << endl;
 	const double angle_tweak = 0.275 * err; 
 
 	cout << angle_tweak << endl;
@@ -224,7 +226,8 @@ void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& 
     t = ((double)getTickCount() - t)/getTickFrequency();
     cout << "Times passed in seconds: " << t << endl;
 	return;
-   
+   #endif
+    
     //create a color image, to be annotated with information about the lane
     // extraction 
     cvtColor(proj, this->processed, CV_GRAY2BGR);

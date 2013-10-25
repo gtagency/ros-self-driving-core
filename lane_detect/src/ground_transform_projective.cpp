@@ -32,7 +32,7 @@ void GroundTransformProjective::transform(const Mat& input, Mat& output, double 
     const double camera_pitch = M_PI_2 + .26 + angle_tweak; // radians from vertical -- ADJUST ME
 
     output = Mat::zeros(Size(output_x_res, output_y_res), input.type());
-    
+printf("wee\n");    
     // compute trig outside of the loop for such fastness
     const double cos_camera_pitch = cos(camera_pitch);
     const double sin_camera_pitch = sin(camera_pitch);
@@ -69,6 +69,7 @@ void GroundTransformProjective::transform(const Mat& input, Mat& output, double 
                 input.at<unsigned char>(input_y, input_x) ? 0xFF : 0;
         }
     }
+printf("weeee\n");    
 /*
     // resolution of the input image in the camera frame
     const Size input_size = input.size();
