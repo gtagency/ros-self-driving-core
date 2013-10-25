@@ -30,6 +30,8 @@ add_message_files(
     MotorCommand.msg
     Obstacle.msg
     ObstacleArrayStamped.msg
+    Plan.msg
+    PlanStep.msg
 )
 
 ## Generate services in the 'srv' folder

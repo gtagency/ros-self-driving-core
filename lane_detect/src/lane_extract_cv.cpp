@@ -1,9 +1,13 @@
 
 #include <vector>
+
+#include "ground_transform_projective.h"
+#include "lane_isolate.h"
 #include "lane_extract_cv.h"
 #include "curve_detect.h"
 #include "math.h"
 
+using namespace lane_isolate;
 using namespace ld;
 using namespace cd;
 using namespace std;
@@ -178,7 +182,7 @@ void LaneExtractCv::annotateImage(cv::Mat& img, const Lane& lane) {
         pt = nextPt;
     }
 }
-void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& gtrans, int maxLanes) {
+void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& _gtrans, int maxLanes) {
     
     cv::Mat srcGray, mask, thold, edge, edgeMask;
     cv::cvtColor(src, srcGray, CV_BGR2GRAY);
@@ -195,8 +199,21 @@ void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& 
     //remove small features (probably not lanes)
     removeSmall(mask, mask, 100);
 
+	GroundTransformProjective gtrans;
+
     Mat proj;
-    gtrans.transform(mask, proj);
+    gtrans.transform(mask, proj, 0.0);
+
+	Mat isolated;
+	const double angle_tweak = 0.275 * laneIsolate(isolated, proj);
+
+	cout << angle_tweak << endl;
+
+	gtrans.transform(mask, proj, angle_tweak);
+	laneIsolate(isolated, proj);
+
+	this->processed = proj;
+	return;
    
     //create a color image, to be annotated with information about the lane
     // extraction 

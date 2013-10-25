@@ -3,7 +3,7 @@
 
 import rospy
 from sensor_msgs.msg import NavSatFix
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import TwistStamped
 
 from testing.srv import *
 
@@ -13,6 +13,7 @@ import time
 import math
 import signal
 import sys
+
 def signal_handler(signal, frame):
     print 'You pressed Ctrl+C!'
     sys.exit(0)
@@ -23,52 +24,51 @@ class GpsSim(object):
     def __init__(self):
         rospy.init_node("gps_sim")
         self.fixPub = rospy.Publisher("fix", NavSatFix)
-        rospy.Subscriber("moveTowards", Point, self.handleMoveTowards)
+        rospy.Subscriber("vel_sim", TwistStamped, self.handleVelocity)
         rospy.Service("playControl", PlayControl, self.handlePlayControl)
         rospy.Service("setup", GpsSimSetup, self.handleGpsSimSetup)
 
         self.setupSimulator(rospy.get_param("~startLat", None),
                             rospy.get_param("~startLon", None),
-                            rospy.get_param("~endLat", None),
-                            rospy.get_param("~endLon", None),
-                            rospy.get_param("~velocity", None),
+                            rospy.get_param("~linear_velocity", None),
+                            rospy.get_param("~angular_velocity", None),
                             rospy.get_param("~updateRateMS", None))
-        
+
+        self.orientation = 0 # is due east        
         self.lastTime = time.time()
         self.curTime  = self.lastTime
 
         self.playing = rospy.get_param("~startImmediately", None)
         rospy.loginfo("Start immediately: %s", self.playing)
 
-    def setupSimulator(self, startLat, startLon, endLat, endLon, velocity, updateRateMS):
+    def setupSimulator(self, startLat, startLon, linear_velocity, angular_velocity, updateRateMS):
 
         self.startLat = startLat
         self.startLon = startLon
-        self.endLat   = endLat
-        self.endLon   = endLon
         self.curLat   = self.startLat
         self.curLon   = self.startLon
-        self.velocity = velocity
+        self.linear_velocity = linear_velocity
+        self.angular_velocity = angular_velocity
         self.updateRateMS = updateRateMS
-        if updateRateMS:
-            self.updateRateSecs = updateRateMS/1000.0
+        self.updateRateSecs = updateRateMS/1000.0 if updateRateMS else None
 
         self.testIfSetup()
         rospy.loginfo("Simulator parameters set:")
         if self.startLat and self.startLon:
             rospy.loginfo("start: %f, %f" % (self.startLat, self.startLon))
-        if self.endLat and self.endLon:
-            rospy.loginfo("end: %f, %f" % (self.endLat, self.endLon))
-        print self.velocity
-        if self.velocity:
-            rospy.loginfo("velocity (magnitude) %d m/s" % self.velocity)
+        if self.linear_velocity and self.angular_velocity:
+            rospy.loginfo("velocity (linear and angular) %f, %f m/s" % (self.linear_velocity, self.angular_velocity))
         if self.updateRateSecs:
             rospy.loginfo("with %f second updates" % self.updateRateSecs)
         if self.isSetup:
             rospy.loginfo("Setup complete!") 
 
     def testIfSetup(self):
-        self.isSetup = self.startLat and self.startLon and self.endLat and self.endLon and self.velocity and self.updateRateSecs
+        self.isSetup = self.startLat != None and \
+                       self.startLon != None and \
+                       self.linear_velocity  != None and \
+                       self.angular_velocity != None and \
+                       self.updateRateSecs   != None
 
     def doWork(self):
         while True:
@@ -81,10 +81,13 @@ class GpsSim(object):
                 if self.isSetup:
                     elapsed = self.curTime - self.lastTime
                     self.lastTime = self.curTime
-                    theta = math.atan2(self.endLat - self.curLat, self.endLon - self.curLon)
+                    disp  = self.linear_velocity  * elapsed
+                    self.orientation += self.angular_velocity * elapsed
+                    if self.orientation > 2 * math.pi:
+                        self.orientation -= 2 * math.pi
                     # because the size of one degree
-                    self.curLat += (self.velocity * math.sin(theta) / self.calcLatDegreeLength(self.curLat, self.curLon))
-                    self.curLon += (self.velocity * math.cos(theta) / self.calcLonDegreeLength(self.curLat, self.curLon))
+                    self.curLat += (disp * math.sin(self.orientation) / self.calcLatDegreeLength(self.curLat, self.curLon))
+                    self.curLon += (disp * math.cos(self.orientation) / self.calcLonDegreeLength(self.curLat, self.curLon))
                     self.publishCurLatLon()
                 elif self.curLat and self.curLon:
                     # even if we're not set up, we need to publish our current position
@@ -111,11 +114,6 @@ class GpsSim(object):
         rospy.loginfo("Publishing position %f, %f at time %f", self.curLat, self.curLon, self.curTime)
  
         self.fixPub.publish(msg)
-
-    def handleMoveTowards(self, data):
-        self.endLat = data.x
-        self.endLon = data.y
-        self.testIfSetup()
     
     def handlePlayControl(self, req):
         if self.isSetup:
@@ -125,10 +123,17 @@ class GpsSim(object):
             # when we start up
             self.lastTime = time.time()
         else:
-            rospy.logerror("Unable to control play.  Simulator not setup.")
+            rospy.logerr("Unable to control play.  Simulator not setup.")
 
     def handleGpsSimSetup(self, req):
-        self.setupSimulator(req.startLat, req.startLon, req.endLat, req.endLon, req.velocity, req.updateRateMS)
+        self.setupSimulator(req.startLat, req.startLon, req.linear_velocity, req.angular_velocity, req.updateRateMS)
+
+    def handleVelocity(self, data):
+        # NOTE: only use linear.y, angular.z velocity
+        self.linear_velocity = data.twist.linear.y 
+        self.angular_velocity = data.twist.angular.z
+        self.testIfSetup()
+        rospy.loginfo("Velocity message received. linear: %f, angular: %f, setup: %s" % (self.linear_velocity, self.angular_velocity, self.isSetup))
 
 def main():
     signal.signal(signal.SIGINT, signal_handler)

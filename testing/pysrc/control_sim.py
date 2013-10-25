@@ -76,7 +76,6 @@ class ControlSim(object):
         self.steering = None
 
     def step(self):
-        print "Steppin"
         linVel = None
         if self.locomotion:
             linVel = self.locomotion.step()
@@ -91,15 +90,15 @@ class ControlSim(object):
             if self.steering.isDone():
                 self.steering = None
 
-        if linVel or steerVel:
-            msg = TwistStamped()
-            msg.header.stamp = rospy.Time.now()
-            # only set y and z...we only have velocity in the direction of the car, and we're
-            # only affecting yaw with our turning
-            # TODO: 
-            msg.twist.linear.y = linVel if linVel else 0.0
-            msg.twist.angular.z = steerVel if steerVel else 0.0
-            self.velPub.publish(msg)
+        #if linVel or steerVel:
+        msg = TwistStamped()
+        msg.header.stamp = rospy.Time.now()
+        # only set y and z...we only have velocity in the direction of the car, and we're
+        # only affecting yaw with our turning
+        # TODO: 
+        msg.twist.linear.y = linVel if linVel else 0.0
+        msg.twist.angular.z = steerVel if steerVel else 0.0
+        self.velPub.publish(msg)
 
     def handleLinearCommand(self, data):
         # from LA spec sheet

@@ -1,0 +1,13 @@
+<launch>
+    <node pkg="testing" type="gps_sim.py" name="gps_sim">
+        <param name="startLat" value="33.78151"/>
+        <param name="startLon" value="-84.39357"/>
+        <param name="updateRateMS" value="500"/>
+        <param name="startImmediately" value="true"/>
+        <remap from="vel_sim" to="vel" />
+    </node>
+    <node pkg="driver" type="driver.py" name="driver" />
+    <node pkg="testing" type="control_sim.py" name="control_sim" />
+    <!-- <node pkg="testing" type="figure_8_planner.py" name="figure_8_planner" /> -->
+    <node pkg="testing" type="waypoint_planner.py" name="figure_8_planner" />
+</launch>

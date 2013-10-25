@@ -2,6 +2,7 @@ float64 startLat
 float64 startLon
 float64 endLat
 float64 endLon
-float64[2] velocity
+float64 linear_velocity
+float64 angular_velocity
 uint32 updateRateMS
 ---
