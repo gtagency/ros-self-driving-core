@@ -7,7 +7,8 @@ namespace ld {
     class GroundTransformProjective : public GroundTransform {
 
     public:
-        void transform(const cv::Mat& src, cv::Mat& dest) const;
+		void transform(const cv::Mat& src, cv::Mat& dest) const;
+        void transform(const cv::Mat& src, cv::Mat& dest, double angle_tweak) const;
     };
 }
 

@@ -5,6 +5,7 @@
 #include "cv.h"
 #include "lane.h"
 #include "ground_transform.h"
+#include "lane_isolate.h"
 
 namespace ld {
 
