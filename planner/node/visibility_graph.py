@@ -85,10 +85,89 @@ def visibility_graph(polygons, start, goal, width = 0):
     return graph
 
 
-# Expands all polygons by the given width
+# Expands all polygons by the given width, assumes convex polygons
 def polygon_expansion(polygons, width):
-	# TODO
-	return polygons
+	new_polygons = []
+	for polygon in polygons:
+		sumx = 0
+		sumy = 0
+		leng = len(polygon.points)
+		for point in polygon.points:
+			sumx += point.x
+			sumy += point.y
+		avg = Point(sumx/leng, sumy/leng)
+
+		new_edge_lines = []
+		for edge in polygon.edges:
+			e1 = edge.points[0]
+			e2 = edge.points[1]
+			dx = e2.x - e1.x
+			dy = e2.y - e1.y
+			ndx = dy
+			ndy = -dx
+			a = Point(e2.x + ndx, e2.y + ndy)
+			b = Point(e2.x - ndx, e2.y - ndy)
+			new_edge_point = None
+			if euclidean_distance(avg, a) < euclidean_distance(avg, b):
+				new_edge_point = b
+			else:
+				new_edge_point = a
+			if dy == 0:
+				new_edge_lines.append((new_edge_point, float("inf")))
+			else:
+				new_edge_lines.append((new_edge_point, dx/dy))
+
+		new_points = []
+		new_edges = []
+
+		for i in xrange(len(new_edge_lines)):
+			line1 = new_lines[i]
+			line2 = new_lines[(i + 1) % len(new_edge_lines)]
+			new_points.append(line_intersect(line1, line2))
+
+		for i in xrange(len(new_points)):
+			new_edges.append(Edge(new_points[i], new_points[(i + 1) % len(new_points)]))
+
+		new_polygons.append(Polygon(new_points, new_edges))
+
+
+	return new_polygons
+
+
+# Finds the intersect point for two lines in the form (point, slope)
+def line_intersect(line1, line2):
+	if line1[1] == float("inf"):
+		x = line1[0].x
+		y = line2[1] * (x - line2[0].x) + line2[0].y
+		return Point(x, y)
+	if line2[1] == float("inf"):
+		x = line2[0].x
+		y = line1[1] * (x - line1[0].x) + line1[0].y
+		return Point(x, y)
+	x = (line1[1] * line1[0].x - line2[1] * line2[0].x + line2[0].y - line1[0].y) / (line1[1] - line2[1])
+	y = line1[1] * (x - line2[0].x) + line2[0].y
+	return Point(x, y)
+
+
+# # Assumes a convex polygon with ordered vertices
+# # Returns 1 for clockwise, -1 for counterclockwise
+# def determinePolygonDirection(polygon):
+# 	# Edge from points 0 to 1
+# 	e1dx = polygon.points[1].x - polygon.points[0].x
+# 	e1dy = polygon.points[1].y - polygon.points[0].y
+# 	# Normal to first edge
+# 	n1dx = -dy
+# 	n1dy = dx
+# 	# Edge from points 1 to 2
+# 	e2dx = polygon.points[2].x - polygon.points[1].x
+# 	e2dy = polygon.points[2].y - polygon.points[1].y
+# 	# Dot product
+# 	d = n1dx * e2dx + n1dy * e2dy
+
+# 	if d > 0:
+# 		return 1
+# 	else
+# 		return -1
 
 
 # Removes points and edges including those points, returns the new graph
@@ -135,6 +214,8 @@ def find_interior_points(graph, polygons):
 # Returns a list of all points in the graph that are concave
 def find_concave_points(graph, polygons):
 	# TODO
+	# But do this come other time
+	# For not assume convex polygons
 	return []
 
 
