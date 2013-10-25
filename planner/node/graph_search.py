@@ -27,7 +27,7 @@ def graph_search(points, edges, start, goal):
 
 	pqueue = []
 	visited = set([])
-	heapq.heappush(pqueue, (0 + heuristic(start, goal), start, [], 0))
+	heapq.heappush(pqueue, (0 + heuristic(start, goal), start, [start], 0))
 
 	while not len(pqueue) == 0 :
 	    state = heapq.heappop(pqueue)

@@ -46,18 +46,6 @@ def calc_destination_direction():
     global brain_state
     dest_dir = 0
 	(dx, dy) = brain_state.getDistanceToGoal()
-#	
-#	if dx == 0:
-#		if current_location.longitude < current_destination.latitude:
-#			dest_dir = 0
-#		else:
-#			dest_dir = math.pi
-#	else:
-#		dest_dir = math.atan(dy / dx)
-#		if current_location.longitude > current_destination.longitude:
-#			dest_dir += math.pi
-#		elif current_location.latitude > current_destination.latitude:
-#			dest_dir += math.pi * 2
 
     dest_dir = math.atan2(dy, dx)
     # wrap negative angles around to be between 0 and pi
@@ -83,6 +71,7 @@ def update_obstacles(obstacles_data):
 		plan = path_planner.plan_new_path(world_model, dest_dir)
 
 	if plan != None:
+        # TODO translate
 		path_pub.publish(plan)
 
 def update_destination(destination_data):
@@ -91,6 +80,7 @@ def update_destination(destination_data):
 
 	dest_dir = calc_destination_direction()
 
+    # TODO translate
 	path_pub.publish(path_planner.plan_new_path(world_model.obstacles, dest_dir))
 
 def update_velocity(velocity_data):
