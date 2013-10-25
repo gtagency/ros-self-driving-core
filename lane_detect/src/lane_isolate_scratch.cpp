@@ -10,8 +10,6 @@ using namespace cv;
 
 namespace lane_isolate {
 
-//TODO: REFACTOR THE HELL OUT OF THIS
-
 static void addEndpoints(const Vec4f& line, std::vector<Point>& points) {
 	const double yint1 = 0;
 	const double xint1 = line[2] + (yint1 - line[3]) / line[1] * line[0];
@@ -26,11 +24,13 @@ static void addEndpoints(const Vec4f& line, std::vector<Point>& points) {
 
 void maskImageByDensity(Mat& img) {
     int boxHeight = 20;
-    int boxWidth = 20;
+    int boxWidth = 40;
     int boxHeightHalf = boxHeight >> 2;
     int boxWidthHalf = boxWidth >> 2;
+//    double t = (double)getTickCount();
     cv::Size size = img.size();
     Mat img2 = img.clone();
+//    cvtColor(img2, img2, CV_GRAY2BGR);
 
     int step = 3;
     int maxDensity = boxHeight * boxWidth;
@@ -55,6 +55,8 @@ void maskImageByDensity(Mat& img) {
         }
     }
         
+  //      t = ((double)getTickCount() - t)/getTickFrequency();
+    //    cout << "Times passed in seconds: " << t << endl;
     img = img2; // * maxDensity;
 }
 
@@ -68,10 +70,7 @@ static void drawLine(Mat& img, const Vec4f& line, Scalar color) {
 	cv::line(img, Point(xint1, yint1), Point(xint2, yint2), color, 1, 8);
 }
 
-double euclidean(Point pt1, Point pt2) {
-    return sqrt(pow(pt2.x - pt1.x, 2) + pow(pt2.y - pt1.y, 2));
-}
-double laneIsolate(const Mat& input, Mat& output, std::vector<std::vector<Point> >& polygons) {
+double laneIsolate(Mat& output, const Mat& input) {
 	const Size input_size = input.size();
 	Mat filled = input.clone();
 
@@ -116,9 +115,9 @@ double laneIsolate(const Mat& input, Mat& output, std::vector<std::vector<Point>
 				output.at<unsigned char>(y, x) = 0xFF;
                 Point pt = Point(x, y);
                 all_points.push_back(pt);
-//				if (right_edge_points.size() < 150) {
+				if (right_edge_points.size() < 350) {
 					right_edge_points.push_back(pt);
-//				}
+				}
 				smooth = 5;
 			}
 			else if (filled.at<unsigned char>(y, x+0) == 0xFF &&
@@ -127,9 +126,9 @@ double laneIsolate(const Mat& input, Mat& output, std::vector<std::vector<Point>
 				output.at<unsigned char>(y, x) = 0x80;
                 Point pt = Point(x, y);
                 all_points.push_back(pt);
-//				if (left_edge_points.size() < 150) {
+				if (left_edge_points.size() < 350) {
 					left_edge_points.push_back(pt);
-//				}
+				}
 				break;
 			}
 		}
@@ -137,73 +136,64 @@ double laneIsolate(const Mat& input, Mat& output, std::vector<std::vector<Point>
 
 
 	output.at<unsigned char>(0, output.size().width / 2) = 0xC0;
-    std::vector<Point> some_points = right_edge_points;
-//    some_points.insert(some_points.end(), left_edge_points.begin(), left_edge_points.end());
+
 	Vec4f right_edge;
 	if (right_edge_points.size() > 10) {
 		fitLine(right_edge_points, right_edge, CV_DIST_L2, 0, 0.01, 0.01);
-//        addEndpoints(right_edge, some_points);	
+        addEndpoints(right_edge, all_points);	
 		drawLine(output, right_edge, 0x80);
     }
 	Vec4f left_edge;
 	if (left_edge_points.size() > 10) {
 		fitLine(left_edge_points, left_edge, CV_DIST_L2, 0, 0.01, 0.01);
-  //      addEndpoints(left_edge, all_points);	
+        addEndpoints(left_edge, all_points);	
 		drawLine(output, left_edge, 0x80);
 	}
+   /* 
+    vector<int> hull;
+    convexHull(Mat(all_points), hull, CV_CLOCKWISE);
+    int i;
+    //for( i = 0; i < points.size(); i++ )
+      //  circle(output, points[i], 3, Scalar(0xC0), CV_FILLED, CV_AA);
+        
+    int hullcount = (int)hull.size();
+    Point pt0 = all_points[hull[hullcount-1]];
+       
+    for( i = 0; i < hullcount; i++ )
+    {
+        Point pt = all_points[hull[i]];
+        circle(output, pt, 2, Scalar(0xC0), CV_FILLED, CV_AA);
+        line(output, pt0, pt, Scalar(0xC0), 1, CV_AA);
+        pt0 = pt;
+    }
+
+
+    */
 
     vector<vector<cv::Point> > contours;
     cv::findContours(output.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
+    vector<vector<cv::Point> > erase;
+
     /// Approximate contours to polygons + get bounding rects and circles
     vector<vector<cv::Point> > contours_poly( contours.size() );
-    std::vector<Point> right_poly, left_poly;
-    cvtColor(filled, output, CV_GRAY2BGR);
-    //output = Mat::zeros(output.size(), output.type());
-    cv::approxPolyDP( cv::Mat(left_edge_points),  left_poly,  2, true );
-    cv::approxPolyDP( cv::Mat(right_edge_points), right_poly, 2, true );
 
-    std::vector<Point> full_poly = right_poly;
-    Point firstPt = full_poly[0];
-    Point testPt1 = left_poly[0];
-    Point testPt2 = left_poly[1];
-   
-    //TODO: may need to be more sophisticated...section parts of the image, or something
-    if (euclidean(firstPt, testPt1) < euclidean(firstPt, testPt2)) {
-    } else {
-        std::reverse(left_poly.begin(), left_poly.end());
-    } 
-        full_poly.insert(full_poly.end(), left_poly.begin(), left_poly.end());
-    
-    int j = 0;
-    //annotate the output image
-    Point lastPt;
-    for (std::vector<Point>::iterator it = full_poly.begin();
-        it != full_poly.end();
-        it++, j++) {
-        
-        if (j > 0) {
-	        cv::line(output, lastPt, *it, Scalar(0, 255, 255 - j * 2), 1, 8);
-        }
-        circle(output, *it, 2, Scalar(0, 255, 255 - j * 2), CV_FILLED, CV_AA);
-        lastPt = *it;
-    }
-    
-	cv::line(output, lastPt, full_poly[0], Scalar(0, 255, 255 - j * 2), 1, 8);
-    polygons.clear();
-    polygons.push_back(full_poly);
-    return 0;
-
+    cvtColor(output, output, CV_GRAY2BGR);
+    int boxWidth = 20;
+    int boxHeight = 40;
+    output = Mat::zeros(output.size(), output.type());
     for( int i = 0; i < contours.size(); i++ ) {
+        cv::Point2f center;
+        float radius;
         cv::approxPolyDP( cv::Mat(contours[i]), contours_poly[i], 3, true );
 
-        //vector<Point> tmp = contours_poly.at(i);
-        //const Point* elementPoints[1] = { &tmp[0] };
-        //int numberOfPoints = (int)tmp.size();
+        vector<Point> tmp = contours_poly.at(i);
+        const Point* elementPoints[1] = { &tmp[0] };
+        int numberOfPoints = (int)tmp.size();
 
 //        fillPoly(output, elementPoints, &numberOfPoints, 1, Scalar(0, 255, 0)); 
         int j = 0;
-        //annotate the output image
+        
         Point lastPt;
         for (std::vector<Point>::iterator it = contours[i].begin();
             it != contours[i].end();
@@ -229,9 +219,8 @@ double laneIsolate(const Mat& input, Mat& output, std::vector<std::vector<Point>
             lastPt = *it;
         }
     }
-    cout << "Contour polygons: " << contours_poly.size() << endl; 
+    cout << "Contours: " << contours.size() << endl; 
 
-    polygons = contours_poly;
 	if (right_edge_points.size() > 10 && left_edge_points.size() > 10) {
 		return right_edge[0] - left_edge[0];
 	}

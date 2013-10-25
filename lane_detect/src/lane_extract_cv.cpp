@@ -205,16 +205,21 @@ void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& 
     Mat proj;
     gtrans.transform(mask, proj, 0.0);
 
-//    std::vector<Point> lanePoints;
+    std::vector<std::vector<Point> > polygons;
 	Mat isolated;
-    double err = laneIsolate(isolated, proj); //, lanePoints);
+    double err = laneIsolate(proj, isolated, polygons);
 	const double angle_tweak = 0.275 * err; 
 
 	cout << angle_tweak << endl;
 
-//	gtrans.transform(mask, proj, angle_tweak);
-  //  laneIsolate(isolated, proj);
+	gtrans.transform(mask, proj, angle_tweak);
+    laneIsolate(proj, isolated, polygons);
 
+    for (std::vector<std::vector<Point> >::iterator it = polygons.begin();
+         it != polygons.end();
+         it++) {
+        this->lanes.push_back(Lane(*it));
+    }
 	this->processed = isolated;
     t = ((double)getTickCount() - t)/getTickFrequency();
     cout << "Times passed in seconds: " << t << endl;

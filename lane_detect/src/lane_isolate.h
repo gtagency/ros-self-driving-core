@@ -6,7 +6,7 @@
 
 namespace lane_isolate {
 
-double laneIsolate(cv::Mat& output, const cv::Mat& input);
+double laneIsolate(const cv::Mat& input, cv::Mat& output, std::vector<std::vector<cv::Point> >& polygons);
 
 }
 
