@@ -82,7 +82,7 @@ def visibility_graph(polygons, start, goal, width = 0):
 	concave_points = find_concave_points(graph, polygons)
 	graph = remove_points_from_graph(graph, concave_points)
 
-    return graph
+	return graph
 
 
 # Expands all polygons by the given width, assumes convex polygons
@@ -105,6 +105,10 @@ def polygon_expansion(polygons, width):
 			dy = e2.y - e1.y
 			ndx = dy
 			ndy = -dx
+			mag = math.sqrt(ndx * ndx + ndy * ndy)
+			ndx = ndx * width / mag
+			ndy = ndy * width / mag
+
 			a = Point(e2.x + ndx, e2.y + ndy)
 			b = Point(e2.x - ndx, e2.y - ndy)
 			new_edge_point = None
@@ -112,17 +116,17 @@ def polygon_expansion(polygons, width):
 				new_edge_point = b
 			else:
 				new_edge_point = a
-			if dy == 0:
+			if dx == 0:
 				new_edge_lines.append((new_edge_point, float("inf")))
 			else:
-				new_edge_lines.append((new_edge_point, dx/dy))
+				new_edge_lines.append((new_edge_point, dy/dx))
 
 		new_points = []
 		new_edges = []
 
 		for i in xrange(len(new_edge_lines)):
-			line1 = new_lines[i]
-			line2 = new_lines[(i + 1) % len(new_edge_lines)]
+			line1 = new_edge_lines[i]
+			line2 = new_edge_lines[(i + 1) % len(new_edge_lines)]
 			new_points.append(line_intersect(line1, line2))
 
 		for i in xrange(len(new_points)):

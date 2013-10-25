@@ -38,7 +38,7 @@ def node():
     rospy.Subscriber('obstacles', ObstacleArrayStamped, update_obstacles)
     rospy.Subscriber('next_waypoint', Point, update_destination)
     rospy.Subscriber('fix', NavSatFix, update_position)
-    rospy.Subscriber('vel', TwistStamped, update_velocity)
+    rospy.Subscriber('vel', Float64, update_velocity)
     rospy.loginfo("Planner active")
     rospy.spin()
 
@@ -84,7 +84,7 @@ def update_destination(destination_data):
 	path_pub.publish(path_planner.plan_new_path(world_model.obstacles, dest_dir))
 
 def update_velocity(velocity_data):
-	brain_state.updateVelocity(velocity_data.twist.linear.y, velocity_data.twist.angular.z, velocity_data.data.header.stamp
+	brain_state.updateVelocity(velocity_data.data, position_data.data.header.stamp
 
 def update_position(position_data):
 	gpt = GlobalPoint(position_data.data.y, position_data.data.x)

@@ -1,6 +1,7 @@
 # path_planner.py
 
 from world_model import *
+import math
 
 CURVE_RADIUS = 6
 CAR_WIDTH = 2
@@ -14,9 +15,9 @@ class PathPlanner:
 	# Forces a replan
 	# Requires the obstacles to plan around
 	# Uses the direction of the final destination
-	def plan_new_path(world_model, brain_state, final_dest_dir):
+	def plan_new_path(world_model, final_dest_dir):
         # TODO: determining the goal is probably best put in the planning strategy too
-		goal = determine_goal(world_model, brain_state, final_dest_dir)
+		goal = determine_goal(world_model, final_dest_dir)
 		start = self.planning_strategy.init_start()
 		plan = self.planning_strategy.plan(world_model.obstacles, start, goal, CURVE_RADIUS + CAR_WIDTH)
 		curve_plan()
@@ -32,21 +33,52 @@ class PathPlanner:
 		if (True):
 			return self.plan_new_path(obstacles, final_dest_dir)
 
-	def determine_goal(world_model, brain_state, final_dest_dir):
+	def determine_goal(world_model, final_dest_dir):
         # Strategy: sample from the furthest polygon that defines the drivable space, and pick the one that fits most evenly between all of the obstacles around it
-        # NEED: lane_detect to report 1-n polygons about what is drivable.  This assumes curves will be overlapping polygons, and will pick a goal that's between them (kind of like an apex of a turn)
-
-        last_goal = brain_state.last_goal if brain_state.last_goal != None else brain_state.current_location
-        surfaces = world_model.get_drivable_surfaces()
-        # extend last_goal in the direction the car may be traveling in 
-        numPoints = 100
-        for i in xrange(numPoints):
-            # the score is the sum of distance from the containing polygon to all adjacent polygons (centers).  this should, in the case of a curve, put the ideal goal at the intersection of the near poly and far poly
-            (possible_goal, dist_from_center) = sample_from_and_Score(surfaces, brain_state.current_location.value, brain_state.velocity.value)
-            score = dist_from_
-        brain_state.last_goal = goal
+        # NEED: lane_detect to report 1-n polygons about what is drivable
 		return Point(0, world_model.world_view_height)
 
 	def curve_plan():
-		# TODO
-		return None
+		points = plan
+		corner_angles = []
+		for i in xrange(len(points) - 2):
+			point_start = points[i]
+			point_mid = points[i + 1]
+			point_end = points[i + 2]
+			adx = point_mid.x - point_start.x
+			ady = point_mid.y - point_start.y
+			bdx = point_mid.x - point_end.x
+			bdy = point_mid.y - point_end.y
+			adotb = adx * bdx + ady * bdy
+			atimesb = math.sqrt((adx * adx + ady * ady) * (bdx * bdx + bdy * bdy))
+			corner_angles.append(math.acos(adotb / atimesb))
+		distance_cuts = [ CURVE_RADIUS * math.sin((math.pi - a) / 2) / math.sin(math.pi / 2) for a in corner_angles ]
+
+		# Eliminating later sections of the path if sections are too small to turn through
+		if distance_cuts[0] > distance(points[0], points[1]):
+			plan = []
+			return
+		for i in xrange(len(p) - 3):
+			if distance_cuts[i] + distance_cuts[i + 1] > distance(point[i + 1], point[i + 2]):
+				points = points[:i + 3]
+				distance_cuts = distance_cuts[:i + 1]
+				corner_angles = corner_angles[:i + 1]
+				break
+		if distance_cuts[len(distance_cuts) - 1] > distance(points[len(points) - 2], points[len(points) - 1]):
+			points = points[:len(points) - 1]
+			distance_cuts = distance_cuts[:len(distance_cuts) - 1]
+			corner_angles = corner_angles[:len(corner_angles) - 1]
+
+		plan = []
+		plan.append((distance(points[0], points[2]) - distance_cuts[0], 0, CURVE_RADIUS))
+		for i in xrange(len(corner_angles) - 1):
+			s = CURVE_RADIUS * (math.pi - corner_angles[i])
+			plan.append((s, corner_angles[i], CURVE_RADIUS))
+			plan.append((distance(point[i + 1], point[i + 2]) - distance_cuts[i] - distance_cuts[i + 1], 0, CURVE_RADIUS))
+		s = CURVE_RADIUS * (math.pi - corner_angles[len(corner_angles) - 1])
+		plan.append((s, corner_angles[len(corner_angles) - 1], CURVE_RADIUS))
+		plan.append((distance(points[len(points) - 2], points[len(points) - 1]) - distance_cuts[len(distance_cuts) - 1], 0, CURVE_RADIUS))
+
+
+	def distance(point1, point2):
+		return math.sqrt(math.pow(point1.x - point2.x, 2) + math.pow(point1.y - point2.y, 2))
