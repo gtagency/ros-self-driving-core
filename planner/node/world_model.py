@@ -26,6 +26,7 @@ class WorldModel:
         delta_time = (update_time - last_update_time) if last_update_time else update_time
         delta = ModelDelta(self.obstacles, obstacles, self.lanes, lanes, delta_time)
         self.obstacles = obstacles
+        self.lanes = lanes
         self.last_update_time = update_time
         return delta 
         

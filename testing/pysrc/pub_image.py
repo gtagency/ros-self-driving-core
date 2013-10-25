@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-import roslib; roslib.load_manifest('corobot_pid')
 import rospy
 import cv
 import cv2
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
-from corobot_pid.srv import PublishImage
+from testing.srv import PublishImage
 
 image_pub = None
 
