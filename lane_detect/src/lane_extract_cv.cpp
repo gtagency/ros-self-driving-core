@@ -209,10 +209,10 @@ void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& 
 
 	cout << angle_tweak << endl;
 
-	gtrans.transform(mask, proj, angle_tweak);
-	laneIsolate(isolated, proj);
+//	gtrans.transform(mask, proj, angle_tweak);
+//	laneIsolate(isolated, proj);
 
-	this->processed = proj;
+	this->processed = isolated;
 	return;
    
     //create a color image, to be annotated with information about the lane
