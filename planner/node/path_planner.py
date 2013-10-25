@@ -34,7 +34,8 @@ class PathPlanner:
 			return self.plan_new_path(obstacles, final_dest_dir)
 
 	def determine_goal(world_model, final_dest_dir):
-		# TODO
+        # Strategy: sample from the furthest polygon that defines the drivable space, and pick the one that fits most evenly between all of the obstacles around it
+        # NEED: lane_detect to report 1-n polygons about what is drivable
 		return Point(0, world_model.world_view_height)
 
 	def curve_plan():
