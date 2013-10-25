@@ -2,6 +2,7 @@
 
     <node pkg="lane_detect" type="lane_detect_node" name="lane_detect" />
     <node pkg="testing" type="pub_image.py" name="pub_image">
+        <param name="image_file" value="/mnt/hgfs/ros/data/roadshot.png"/>
         <remap from="image_raw" to="/image"/>
     </node>
     <node pkg="image_view" type="image_view" name="image_view">
