@@ -10,6 +10,7 @@ from nav_msgs.msg import Path
 from std_msgs.msg import Float64
 from geometry_msgs.msg import Point32
 from sensor_msgs.msg import NavSatFix
+from core_msgs.msg import *
 
 import visibility_graph
 
@@ -71,8 +72,7 @@ def update_obstacles(obstacles_data):
 		plan = path_planner.plan_new_path(world_model, dest_dir)
 
 	if plan != None:
-        # TODO translate
-		path_pub.publish(plan)
+		publish_plan(plan)
 
 def update_destination(destination_data):
 	gpt = GlobalPoint(destination_data.data.y, destination_data.data.x)
@@ -80,8 +80,7 @@ def update_destination(destination_data):
 
 	dest_dir = calc_destination_direction()
 
-    # TODO translate
-	path_pub.publish(path_planner.plan_new_path(world_model.obstacles, dest_dir))
+    publish_plan(path_planner.plan_new_path(world_model.obstacles, dest_dir))
 
 def update_velocity(velocity_data):
 	brain_state.updateVelocity(velocity_data.data, position_data.data.header.stamp
@@ -89,6 +88,16 @@ def update_velocity(velocity_data):
 def update_position(position_data):
 	gpt = GlobalPoint(position_data.data.y, position_data.data.x)
 	brain_state.updateCurrentLocation(gpt, position_data.data.header.stamp)
+
+def publish_plan(plan):
+    plan_msg = Plan()
+    for step in plan:
+        plan_step = PlanStep()
+        plan_step.length = step[0]
+        plan_step.angle  = step[1]
+        plan_step.radius = step[2]
+        plan_msg.steps.append(plan_step)
+    path_pub.publish(plan_msg)
 
 if __name__ == "__main__":
     node()
