@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <std_msgs/Float32.h>
+#include <std_msgs/Bool.h>
 #include <sensor_msgs/Joy.h>
 //#include <corobot_srvs/MoveArm.h>
 #include <core_msgs/MotorCommand.h>
@@ -7,7 +8,7 @@
 //#include <corobot_msgs/takepic.h>
 //#include <corobot_msgs/PanTilt.h>
 //#include <corobot_msgs/velocityValue.h>
-
+#include <sound_play/SoundRequest.h>
 #include <math.h>
 
 using namespace core_msgs;
@@ -19,6 +20,11 @@ ros::ServiceClient moveGripper_client;
 ros::ServiceClient resetArm_client; 
 */
 ros::Publisher driveControl_pub,steerControl_pub; //takepic_pub,pan_tilt_control;
+int maxFwdSpeed = 30;
+
+bool obstacleFlag = false;
+
+ros::Publisher horn_pub;
 
 int /*speed_left, speed_right,*/ speed_value;
 bool turningLeft, turningRight;
@@ -35,10 +41,18 @@ bool turningLeft, turningRight;
 void handleDrive(const sensor_msgs::Joy::ConstPtr& joy);
 void handleManualToggle(const sensor_msgs::Joy::ConstPtr& joy);
 void handleTurn(const sensor_msgs::Joy::ConstPtr& joy);
+void handleHorn(const sensor_msgs::Joy::ConstPtr& joy);
 
+void honkHorn(); 
 void joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
 
-    handleManualToggle(joy);
+	handleHorn(joy);
+	
+	if (obstacleFlag) {
+		return;
+	}
+    
+	handleManualToggle(joy);
     handleDrive(joy);
     handleTurn(joy);
 }
@@ -55,19 +69,19 @@ void handleDrive(const sensor_msgs::Joy::ConstPtr& joy) {
     float angle = atan2(joy->axes[1], -joy->axes[0]);
         ROS_INFO("angle: [%f]", angle);
     if(joy->buttons[8]) {// && (angle > (M_PI / 4)) && (angle <= (3 * M_PI / 4))) {
-        speed = 100.0 * sqrt(joy->axes[0] * joy->axes[0] + joy->axes[1] * joy->axes[1]) * angle / abs(angle);
+        speed = maxFwdSpeed * sqrt(joy->axes[0] * joy->axes[0] + joy->axes[1] * joy->axes[1]) * angle / abs(angle);
         ROS_INFO("speed: [%d]", (int)speed);
 
-        if(speed > 100) {
-            speed = 100;
+        if(speed > maxFwdSpeed) {
+            speed = maxFwdSpeed;
         }
 
-        if(speed < -100) {
-            speed = -100;
+        if(speed < -maxFwdSpeed) {
+            speed = -maxFwdSpeed;
         }
         secondsDuration = 0;
     }
-    if (lastSpeed != speed) {
+    if (lastSpeed != speed || speed == 0) {
         core_msgs::MotorCommand msg;
         msg.leftSpeed = (int)speed;
         msg.rightSpeed = (int)speed;
@@ -118,6 +132,19 @@ void handleTurn(const sensor_msgs::Joy::ConstPtr& joy) {
     }
 }
 
+void handleHorn(const sensor_msgs::Joy::ConstPtr& joy) {
+    if (joy->buttons[14]) {
+        honkHorn();
+    }	
+}
+
+void honkHorn() {
+    sound_play::SoundRequest msg;
+    msg.sound = sound_play::SoundRequest::PLAY_FILE;
+    msg.command = sound_play::SoundRequest::PLAY_ONCE;
+    msg.arg = "/home/agency/Downloads/vehicle042.wav";
+    horn_pub.publish(msg);
+}
 /*
 //*********************************************************
 //Take picture
@@ -365,6 +392,13 @@ if(joy->axes[4]>0.5) // Shoulder control
 }
 */
 
+int obstacleCallback(const std_msgs::Bool::ConstPtr& flag) {
+	if (!obstacleFlag && flag->data) {
+		honkHorn();
+	} //TODO: for some reason this will honk repeatedly (repeated obstacles)...may need to debug this
+	
+	obstacleFlag = flag->data;
+}
 
 int main(int argc, char** argv) {
   
@@ -392,11 +426,14 @@ int main(int argc, char** argv) {
 
   driveControl_pub = n.advertise<core_msgs::MotorCommand>("PhidgetMotor", 100);
   steerControl_pub = n.advertise<core_msgs::LinearCommand>("PhidgetLinear", 100);
+  horn_pub = n.advertise<sound_play::SoundRequest>("robotsound", 100);
+
   //steerControl_pub = n.advertise<core_msgs::LinearCommand>("LinearPID", 100);
 /*  takepic_pub = n.advertise<takepic>("takepicture",100);
   pan_tilt_control = n.advertise<PanTilt>("pantilt",10);
 */
   ros::Subscriber sub = n.subscribe<sensor_msgs::Joy>("joy", 1000, joyCallback);
+  ros::Subscriber sub2 = n.subscribe<std_msgs::Bool>("obstacle_flag", 1000, obstacleCallback);
  // ros::Subscriber velocity = n.subscribe<velocityValue>("velocityValue", 1000, velocityCallback);
 
   ros::spin();
