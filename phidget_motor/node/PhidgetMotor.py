@@ -187,7 +187,7 @@ def setupMoveService():
     then with the ROS Master as the service PhidgetMotor
 
     """
-    node_name = 'phidget_motor'
+    node_name = 'PhidgetMotor'
 
     rospy.init_node(
             node_name,
