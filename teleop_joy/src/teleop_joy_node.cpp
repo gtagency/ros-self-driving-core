@@ -20,7 +20,7 @@ ros::ServiceClient moveGripper_client;
 ros::ServiceClient resetArm_client; 
 */
 ros::Publisher driveControl_pub,steerControl_pub; //takepic_pub,pan_tilt_control;
-int maxFwdSpeed = 30;
+int maxFwdSpeed = 60;
 
 bool obstacleFlag = false;
 
@@ -66,6 +66,7 @@ void handleDrive(const sensor_msgs::Joy::ConstPtr& joy) {
     int secondsDuration = 0;
     //if the stop button isnt held, we want to go
     //otherwise, just keep sending the stop command
+#if 0
     float angle = atan2(joy->axes[1], -joy->axes[0]);
         ROS_INFO("angle: [%f]", angle);
     if(joy->buttons[8]) {// && (angle > (M_PI / 4)) && (angle <= (3 * M_PI / 4))) {
@@ -81,6 +82,9 @@ void handleDrive(const sensor_msgs::Joy::ConstPtr& joy) {
         }
         secondsDuration = 0;
     }
+#endif
+    float correction = -1.0; //required because the range of a button axis is 0 to -1.0 (all pushed in)
+    speed = correction * (joy->buttons[11] ? -1 : 1) * maxFwdSpeed * joy->axes[13];
     if (lastSpeed != speed || speed == 0) {
         core_msgs::MotorCommand msg;
         msg.leftSpeed = (int)speed;
@@ -107,7 +111,7 @@ void handleTurn(const sensor_msgs::Joy::ConstPtr& joy) {
     float mag = sqrt(joy->axes[0] * joy->axes[0] + joy->axes[1] * joy->axes[1]);
     //joystick is around the center...send 0 speed
     if (mag > 1e-6) {
-        float angle = atan2(joy->axes[1], -joy->axes[0]);
+        float angle = atan2(fabs(joy->axes[1]), -joy->axes[0]);
         float position = 1.0; //1.0 w/o adjustment is neutral steering
         ROS_INFO("angle: [%f]", angle);
         //angles >= 0 are forward angles
