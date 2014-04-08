@@ -33,12 +33,16 @@ maxSpeed = 100
 timer = 0
 posdataPub = None
 position = 0
-minPos = 10
-maxPos = 1014
+minPos = 330
+maxPos = 730
+speed = 0
+
 
 def stop():
     print "Stopping at", position
     try:
+        speed = 0
+
         motorControl.setVelocity(linear,0);
     except PhidgetException as e:
         rospy.logerr("Failed in setVelocity() %i: %s", e.code, e.details)
@@ -60,7 +64,7 @@ def move(request):
     Request a common acceleration, wheel directions and wheel speeds
 
     """
-    global timer, invert_speed
+    global timer, invert_speed, speed
     if timer:
         timer.cancel();
         rospy.logdebug(
@@ -69,7 +73,7 @@ def move(request):
             request.acceleration
             )
 
-    acceleration = bounded_value(request.acceleration, float(minAcceleration), float(maxAcceleration))
+    acceleration = 1.0 * maxAcceleration * bounded_value(request.acceleration, float(minAcceleration), float(maxAcceleration)) / 100
     # NOTE: negate the speed so + is out and - is back
     # FIXME: this should be an attribute
     speed        = bounded_value(request.speed,        float(minSpeed), float(maxSpeed))
@@ -126,7 +130,7 @@ def mcSensorUpdated(e):
     if e.index == feedbackSensor:
         position = e.value
 
-        if position <= minPos or position >= maxPos:
+        if (position <= minPos and speed > 0) or (position >= maxPos and speed < 0):
             stop()
         if posdataPub:
             posdataPub.publish(position)
