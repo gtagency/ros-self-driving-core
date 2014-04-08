@@ -40,7 +40,7 @@ cv::Scalar HIGH_HSV_EDGE = cv::Scalar(40, 255, 255);
  */
 void cannyThreshold(const cv::Mat& src, const cv::Mat& srcGray, cv::Mat& dst, cv::Mat& dstMask) {
     int edgeThresh = 1;
-    int lowThreshold = 60; //120;
+    int lowThreshold = 30; //120;
     int const max_lowThreshold = 200;
     int ratio = 3;
     int kernel_size = 3;
@@ -188,15 +188,15 @@ void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& 
     cv::Mat srcGray, mask, thold, edge, edgeMask;
     cv::cvtColor(src, srcGray, CV_BGR2GRAY);
     //yellow threshold
-    getBinary(src, LOW_HSV, HIGH_HSV, mask);
+//    getBinary(src, LOW_HSV, HIGH_HSV, mask);
     // edge detection
     cannyThreshold(src, srcGray, edge, edgeMask);
     // removeSmall(edgeMask, edgeMask, 50);
     //binary threshold for the really bright stuff
-    threshold( srcGray, thold, 220, 255, 0);
+  //  threshold( srcGray, thold, 220, 255, 0);
     printf("%d, %d, %d\n", thold.size().width, thold.size().height, thold.channels());
     printf("%d, %d, %d\n", mask.size().width, mask.size().height, mask.channels());
-    mask = mask + thold + edgeMask;
+    mask = edgeMask; // mask + thold + edgeMask;
     //remove small features (probably not lanes)
     removeSmall(mask, mask, 100);
 
@@ -204,7 +204,7 @@ void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& 
 
     Mat proj;
     gtrans.transform(mask, proj, 0.0);
-#if 1
+#if 0
     cout << "Transformed" << endl;
     std::vector<std::vector<Point> > polygons;
 	Mat isolated;
@@ -227,10 +227,10 @@ void LaneExtractCv::doLaneExtraction(const cv::Mat& src, const GroundTransform& 
     cout << "Times passed in seconds: " << t << endl;
 	return;
    #endif
-    
     //create a color image, to be annotated with information about the lane
     // extraction 
     cvtColor(proj, this->processed, CV_GRAY2BGR);
+   return;
 
     //find lanes in resulting transform and fill in this->lanes 
     int boxHeight = 20;
