@@ -20,7 +20,7 @@ ros::ServiceClient moveGripper_client;
 ros::ServiceClient resetArm_client; 
 */
 ros::Publisher driveControl_pub,steerControl_pub; //takepic_pub,pan_tilt_control;
-int maxFwdSpeed = 60;
+int maxFwdSpeed = 100;
 
 bool obstacleFlag = false;
 
@@ -48,9 +48,9 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
 
 	handleHorn(joy);
 	
-	if (obstacleFlag) {
-		return;
-	}
+//	if (obstacleFlag) {
+//		return;
+//	}
     
 	handleManualToggle(joy);
     handleDrive(joy);
@@ -61,7 +61,7 @@ int lastSpeed = -1;
 void handleDrive(const sensor_msgs::Joy::ConstPtr& joy) {
     //********************************************
     //Motor control
-    
+    printf("WOAH\n"); 
     float speed = 0.0;
     int secondsDuration = 0;
     //if the stop button isnt held, we want to go
@@ -85,7 +85,8 @@ void handleDrive(const sensor_msgs::Joy::ConstPtr& joy) {
 #endif
     float correction = -1.0; //required because the range of a button axis is 0 to -1.0 (all pushed in)
     speed = correction * (joy->buttons[11] ? -1 : 1) * maxFwdSpeed * joy->axes[13];
-    if (lastSpeed != speed || speed == 0) {
+	printf("Speed: %f\n", speed);
+    if (lastSpeed != speed) {
         core_msgs::MotorCommand msg;
         msg.leftSpeed = (int)speed;
         msg.rightSpeed = (int)speed;
